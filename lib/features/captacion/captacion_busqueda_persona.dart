@@ -4,6 +4,7 @@ import 'package:siven_app/widgets/Encabezado_reporte_analisis.dart'; // Widget r
 import 'package:siven_app/core/services/catalogo_service_red_servicio.dart';
 import 'package:siven_app/core/services/selection_storage_service.dart';
 import 'package:siven_app/core/services/http_service.dart';
+import 'package:siven_app/core/services/PersonaService.dart'; // Importar el servicio de Persona
 import 'package:http/http.dart' as http;
 
 class CaptacionBusquedaPersona extends StatefulWidget {
@@ -16,6 +17,9 @@ class CaptacionBusquedaPersona extends StatefulWidget {
 class _CaptacionBusquedaPersonaState extends State<CaptacionBusquedaPersona> {
   bool habilitarBusquedaPorNombre = false;
   String? seleccion; // Para manejar la selección de botones "Recién Nacido" o "Desconocido"
+  String busqueda = ''; // Texto de búsqueda (cédula o expediente)
+  late PersonaService personaService;
+  List<Map<String, dynamic>> resultados = []; // Almacena los resultados de la búsqueda
 
   // Declaración de servicios
   late CatalogServiceRedServicio catalogService;
@@ -24,7 +28,6 @@ class _CaptacionBusquedaPersonaState extends State<CaptacionBusquedaPersona> {
   @override
   void initState() {
     super.initState();
-
     // Inicialización de servicios
     initializeServices();
   }
@@ -35,6 +38,39 @@ class _CaptacionBusquedaPersonaState extends State<CaptacionBusquedaPersona> {
 
     catalogService = CatalogServiceRedServicio(httpService: httpService);
     selectionStorageService = SelectionStorageService();
+    personaService = PersonaService(httpService: httpService); // Inicializar el servicio de Persona
+  }
+
+  // Método para buscar personas por coincidencia de cédula o expediente
+  void buscarPersonas() async {
+    try {
+      List<Map<String, dynamic>> resultado = await personaService.buscarPersonasPorCedulaOExpediente(busqueda);
+
+      if (resultado.isNotEmpty) {
+        setState(() {
+          resultados = resultado; // Almacenar los resultados de la búsqueda
+        });
+        print('Personas encontradas: $resultado');
+
+        // Navegar a la pantalla de resultados pasando los resultados obtenidos
+        Navigator.pushNamed(
+          context,
+          '/captacion_resultado_busqueda',
+          arguments: resultados, // Pasar los resultados como lista de mapas
+        );
+      } else {
+        // Manejar si no se encuentran personas
+        print('No se encontraron personas con los datos proporcionados');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se encontraron resultados.'))
+        );
+      }
+    } catch (e) {
+      print('Error al buscar personas: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error al buscar personas.'))
+      );
+    }
   }
 
   @override
@@ -177,8 +213,8 @@ class _CaptacionBusquedaPersonaState extends State<CaptacionBusquedaPersona> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded( // Usa Expanded para ajustarse al ancho disponible
-                        child: const Text(
+                      const Expanded( // Usar Expanded para que se ajuste correctamente al espacio disponible
+                        child: Text(
                           'Es una persona identificada',
                           style: TextStyle(color: Color(0xFF2C3E50)),
                         ),
@@ -197,7 +233,7 @@ class _CaptacionBusquedaPersonaState extends State<CaptacionBusquedaPersona> {
                   ),
                   const SizedBox(height: 10),
 
-                  // Campo de texto para número de identificación
+                  // Campo de texto para número de identificación o código de expediente
                   TextFormField(
                     decoration: InputDecoration(
                       hintText: 'Escribe N° de identificación, Cód. de expediente único',
@@ -215,6 +251,11 @@ class _CaptacionBusquedaPersonaState extends State<CaptacionBusquedaPersona> {
                         borderSide: const BorderSide(color: Color(0xFF00BCD4), width: 2),
                       ),
                     ),
+                    onChanged: (value) {
+                      setState(() {
+                        busqueda = value; // Guardar la búsqueda (cédula o expediente)
+                      });
+                    },
                   ),
                   const SizedBox(height: 10),
 
@@ -230,10 +271,7 @@ class _CaptacionBusquedaPersonaState extends State<CaptacionBusquedaPersona> {
 
                   // Botón Buscar con color de fondo 00BCD4
                   ElevatedButton(
-                    onPressed: () {
-                      // Navegación a captacion_resultado_busqueda
-                      Navigator.pushNamed(context, '/captacion_resultado_busqueda');
-                    },
+                    onPressed: buscarPersonas, // Ejecutar búsqueda por cédula o expediente
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 50),
                       backgroundColor: const Color(0xFF00BCD4), // Fondo del botón
@@ -264,5 +302,6 @@ class _CaptacionBusquedaPersonaState extends State<CaptacionBusquedaPersona> {
 void main() {
   runApp(const MaterialApp(
     home: CaptacionBusquedaPersona(),
+    debugShowCheckedModeBanner: false,
   ));
 }
