@@ -19,11 +19,11 @@ class _CaptacionResultadoBusquedaState extends State<CaptacionResultadoBusqueda>
   // Declaración de servicios
   late CatalogServiceRedServicio catalogService;
   late SelectionStorageService selectionStorageService;
+  List<Map<String, dynamic>> resultadosBusqueda = []; // Lista para almacenar los resultados
 
   @override
   void initState() {
     super.initState();
-
     // Inicialización de servicios
     initializeServices();
   }
@@ -38,6 +38,14 @@ class _CaptacionResultadoBusquedaState extends State<CaptacionResultadoBusqueda>
 
   @override
   Widget build(BuildContext context) {
+    // Obtener los argumentos pasados desde la pantalla de búsqueda
+    final argumentos = ModalRoute.of(context)!.settings.arguments as List<Map<String, dynamic>>?;
+
+    // Si los argumentos no son nulos, asignar los resultados a la lista
+    if (argumentos != null) {
+      resultadosBusqueda = argumentos;
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -48,7 +56,7 @@ class _CaptacionResultadoBusquedaState extends State<CaptacionResultadoBusqueda>
           child: IconButton(
             icon: const Icon(Icons.arrow_back, color: Color(0xFF1877F2), size: 32),
             onPressed: () {
-              Navigator.pushNamed(context, '/captacion_busqueda_por_nombre');
+              Navigator.pushNamed(context, '/captacion_busqueda_por_nombre'); // Navegación a búsqueda por nombre
             },
           ),
         ),
@@ -95,49 +103,34 @@ class _CaptacionResultadoBusquedaState extends State<CaptacionResultadoBusqueda>
 
                   // Lista de resultados de búsqueda usando CardPersonaWidget
                   Column(
-                    children: [
-                      CardPersonaWidget(
-                        identificacion: '001023459876H',
-                        expediente: '232HJULI07056876',
-                        nombre: 'Álvaro Benites Hernández',
-                        ubicacion: 'Juigalpa/Chontales',
-                        colorBorde: const Color(0xFF00BCD4), // Color del borde turquesa
-                        colorBoton: const Color(0xFF00BCD4), // Botón con fondo turquesa
-                        textoBoton: 'SELECCIONAR',
-                        onBotonPressed: () {
-                          // Navegación a la pantalla de información del paciente
-                          Navigator.pushNamed(context, '/captacion_inf_paciente');
-                        },
-                      ),
-                      const SizedBox(height: 10), // Espaciado entre las tarjetas
-                      CardPersonaWidget(
-                        identificacion: '010245896712H',
-                        expediente: '587AJULIO6051232',
-                        nombre: 'Álvaro Martín Benites López',
-                        ubicacion: 'Masaya/Masaya',
-                        colorBorde: const Color(0xFF00BCD4), // Color del borde turquesa
-                        colorBoton: const Color(0xFF00BCD4), // Botón con fondo turquesa
-                        textoBoton: 'SELECCIONAR',
-                        onBotonPressed: () {
-                          // Navegación a la pantalla de información del paciente
-                          Navigator.pushNamed(context, '/captacion_inf_paciente');
-                        },
-                      ),
-                      const SizedBox(height: 10), // Espaciado entre las tarjetas
-                      CardPersonaWidget(
-                        identificacion: '024106905612H',
-                        expediente: '573MASIN60781234',
-                        nombre: 'Álvaro Benites Pérez',
-                        ubicacion: 'Catarina/Masaya',
-                        colorBorde: const Color(0xFF00BCD4), // Color del borde turquesa
-                        colorBoton: const Color(0xFF00BCD4), // Botón con fondo turquesa
-                        textoBoton: 'SELECCIONAR',
-                        onBotonPressed: () {
-                          // Navegación a la pantalla de información del paciente
-                          Navigator.pushNamed(context, '/captacion_inf_paciente');
-                        },
-                      ),
-                    ],
+                    children: resultadosBusqueda.map((persona) {
+                      // Concatenar el nombre completo con los diferentes campos
+                      String nombreCompleto = '${persona['primer_nombre'] ?? ''} ${persona['segundo_nombre'] ?? ''} '
+                          '${persona['primer_apellido'] ?? ''} ${persona['segundo_apellido'] ?? ''}'.trim();
+
+                      String municipio = persona['municipio'] ?? 'Sin municipio';
+                      String departamento = persona['departamento'] ?? 'Sin departamento';
+                      String ubicacionCompleta = '$municipio / $departamento';
+
+                      return Column(
+                        children: [
+                          CardPersonaWidget(
+                            identificacion: persona['cedula'] ?? 'Sin cédula',
+                            expediente: persona['codigo_expediente'] ?? 'Sin expediente',
+                            nombre: nombreCompleto, // Mostrar el nombre completo concatenado
+                            ubicacion: ubicacionCompleta, // Mostrar municipio y departamento
+                            colorBorde: const Color(0xFF00BCD4), // Color del borde turquesa
+                            colorBoton: const Color(0xFF00BCD4), // Botón con fondo turquesa
+                            textoBoton: 'SELECCIONAR',
+                            onBotonPressed: () {
+                              // Navegación a la pantalla de información del paciente
+                              Navigator.pushNamed(context, '/captacion_inf_paciente');
+                            },
+                          ),
+                          const SizedBox(height: 10), // Espaciado entre las tarjetas
+                        ],
+                      );
+                    }).toList(),
                   ),
                 ],
               ),
@@ -148,10 +141,4 @@ class _CaptacionResultadoBusquedaState extends State<CaptacionResultadoBusqueda>
       ),
     );
   }
-}
-
-void main() {
-  runApp(const MaterialApp(
-    home: CaptacionResultadoBusqueda(),
-  ));
 }
