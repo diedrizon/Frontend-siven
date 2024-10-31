@@ -7,6 +7,7 @@ import 'package:siven_app/core/services/catalogo_service_red_servicio.dart';
 import 'package:siven_app/core/services/selection_storage_service.dart';
 import 'package:siven_app/core/services/http_service.dart';
 import 'package:http/http.dart' as http;
+import 'package:siven_app/core/services/EventoSaludService.dart';
 
 class InfoDtPacienteCaptacion extends StatefulWidget {
   const InfoDtPacienteCaptacion({Key? key}) : super(key: key);
@@ -65,11 +66,17 @@ class _InfoDtPacienteCaptacionState extends State<InfoDtPacienteCaptacion> {
   // Declaración de servicios
   late CatalogServiceRedServicio catalogService;
   late SelectionStorageService selectionStorageService;
+  late EventoSaludService eventoSaludService; // Servicio agregado
+
+  // Datos de la persona seleccionada
+  Map<String, dynamic> persona = {};
+
+  // Variable para almacenar el nombre del evento seleccionado
+  String? _selectedEventoName;
 
   @override
   void initState() {
     super.initState();
-
     // Inicialización de servicios
     initializeServices();
   }
@@ -80,6 +87,23 @@ class _InfoDtPacienteCaptacionState extends State<InfoDtPacienteCaptacion> {
 
     catalogService = CatalogServiceRedServicio(httpService: httpService);
     selectionStorageService = SelectionStorageService();
+    eventoSaludService =
+        EventoSaludService(httpService: httpService); // Inicializar
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Obtener los argumentos pasados desde la pantalla de búsqueda
+    final args = ModalRoute.of(context)!.settings.arguments;
+    if (args != null && args is Map<String, dynamic>) {
+      setState(() {
+        persona = args;
+      });
+    } else {
+      // Manejar el caso donde no se pasaron argumentos
+      persona = {};
+    }
   }
 
   // Función para alternar entre las tarjetas
@@ -116,8 +140,18 @@ class _InfoDtPacienteCaptacionState extends State<InfoDtPacienteCaptacion> {
   }
 
   // Mostrar tarjeta flotante centrada al hacer clic en el ícono "+"
-  void _showCaptacionDialog() {
-    showDialog(
+  void _showCaptacionDialog() async {
+    List<Map<String, dynamic>> eventos = [];
+    String? selectedEvento;
+
+    try {
+      // Obtener eventos desde el servicio
+      eventos = await eventoSaludService.listarEventosSalud();
+    } catch (e) {
+      print('Error al listar eventos de salud: $e');
+    }
+
+    final result = await showDialog<String>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
@@ -125,50 +159,57 @@ class _InfoDtPacienteCaptacionState extends State<InfoDtPacienteCaptacion> {
             borderRadius: BorderRadius.circular(15.0),
           ),
           contentPadding: const EdgeInsets.all(16.0),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Nueva captación',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  color: Color(0xFF00C1D4),
-                ),
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                decoration: InputDecoration(
-                  labelText: 'Seleccionar evento de salud *',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.0),
+          content: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Nueva captación',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: Color(0xFF00C1D4),
+                    ),
                   ),
-                ),
-                items: ['Malaria', 'Dengue', 'COVID-19', 'Otros']
-                    .map((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-                onChanged: (value) {},
-              ),
-              const SizedBox(height: 20),
-            ],
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    decoration: InputDecoration(
+                      labelText: 'Seleccionar evento de salud *',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                    ),
+                    items: eventos.map((evento) {
+                      return DropdownMenuItem<String>(
+                        value: evento['nombre'],
+                        child: Text(evento['nombre']),
+                      );
+                    }).toList(),
+                    value: selectedEvento,
+                    onChanged: (value) {
+                      setState(() {
+                        selectedEvento = value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              );
+            },
           ),
           actions: [
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Botón "CANCELAR"
                 ElevatedButton(
                   onPressed: () {
-                    Navigator.pop(context);
+                    Navigator.pop(
+                        context); // Cerrar el diálogo sin retornar valor
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white, // Fondo blanco
-                    side: BorderSide(
-                        color: Color(0xFF00C1D4), width: 1), // Borde celeste
+                    backgroundColor: Colors.white,
+                    side: BorderSide(color: Color(0xFF00C1D4), width: 1),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10.0),
                     ),
@@ -178,16 +219,16 @@ class _InfoDtPacienteCaptacionState extends State<InfoDtPacienteCaptacion> {
                     style: TextStyle(fontSize: 16, color: Color(0xFF00C1D4)),
                   ),
                 ),
-                const SizedBox(width: 16), // Separación entre los botones
-                // Botón "GUARDAR"
+                const SizedBox(width: 16),
                 ElevatedButton(
                   onPressed: () {
-                    Navigator.pop(context); // Cerrar el diálogo actual
-                    Navigator.pushNamed(context,
-                        '/captacion'); // Navegar hacia la ruta "captacion"
+                    if (selectedEvento != null) {
+                      Navigator.pop(context,
+                          selectedEvento); // Retornar el evento seleccionado
+                    }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF00C1D4), // Fondo azul celeste
+                    backgroundColor: Color(0xFF00C1D4),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10.0),
                     ),
@@ -203,6 +244,55 @@ class _InfoDtPacienteCaptacionState extends State<InfoDtPacienteCaptacion> {
         );
       },
     );
+
+    if (result != null) {
+      setState(() {
+        _selectedEventoName =
+            result; // Actualizar la variable de estado con el evento seleccionado
+        // Opcional: Agregar el nuevo evento a la lista de eventos si es necesario
+        _eventosCaptacion.add({
+          'event': result,
+          'status': 'ACTIVO', // Puedes ajustar estos valores según tu lógica
+          'lugarCaptacion': 'Nuevo Lugar',
+          'silais': 'Nuevo SILAIS',
+          'unidad': 'Nueva Unidad',
+          'fecha': 'Fecha Actual',
+        });
+      });
+
+      // Construir el nombre completo desde los datos de la persona
+      String nombreCompleto =
+          '${persona['primer_nombre'] ?? ''} ${persona['segundo_nombre'] ?? ''} '
+                  '${persona['primer_apellido'] ?? ''} ${persona['segundo_apellido'] ?? ''}'
+              .trim();
+
+      // Navegar a la pantalla '/captacion' pasando el evento seleccionado y el nombre completo
+      Navigator.pushNamed(
+        context,
+        '/captacion',
+        arguments: {
+          'eventoSeleccionado': result,
+          'nombreCompleto': nombreCompleto,
+        },
+      );
+    }
+  }
+
+  // Función para calcular la edad a partir de la fecha de nacimiento
+  String? calcularEdad(String? fechaNacimiento) {
+    if (fechaNacimiento == null || fechaNacimiento.isEmpty) return null;
+    try {
+      DateTime fecha = DateTime.parse(fechaNacimiento);
+      DateTime ahora = DateTime.now();
+      int edad = ahora.year - fecha.year;
+      if (ahora.month < fecha.month ||
+          (ahora.month == fecha.month && ahora.day < fecha.day)) {
+        edad--;
+      }
+      return '$edad años';
+    } catch (e) {
+      return null;
+    }
   }
 
   @override
@@ -213,6 +303,12 @@ class _InfoDtPacienteCaptacionState extends State<InfoDtPacienteCaptacion> {
     int paginaInicio = _currentPage * _itemsPerPage + 1;
     int paginaFin = (_currentPage * _itemsPerPage + eventosPagina.length)
         .clamp(0, totalRegistros);
+
+    // Construir el nombre completo desde los datos de la persona
+    String nombreCompleto =
+        '${persona['primer_nombre'] ?? ''} ${persona['segundo_nombre'] ?? ''} '
+                '${persona['primer_apellido'] ?? ''} ${persona['segundo_apellido'] ?? ''}'
+            .trim();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -225,7 +321,10 @@ class _InfoDtPacienteCaptacionState extends State<InfoDtPacienteCaptacion> {
             icon: const Icon(Icons.arrow_back,
                 color: Color(0xFF1877F2), size: 32),
             onPressed: () {
-              Navigator.pushNamed(context, '/captacion_busqueda_por_nombre');
+              Navigator.pushNamed(
+                context,
+                '/captacion_resultado_busqueda', // Navegar a '/captacion_resultado_busqueda'
+              );
             },
           ),
         ),
@@ -263,16 +362,18 @@ class _InfoDtPacienteCaptacionState extends State<InfoDtPacienteCaptacion> {
 
                   // Nombre del paciente con el color #00C1D4
                   Row(
-                    children: const [
+                    children: [
                       Icon(Icons.account_circle,
                           color: Color(0xFF00C1D4), size: 32),
-                      SizedBox(width: 10),
+                      const SizedBox(width: 10),
                       Text(
-                        'Álvaro Benites Hernández',
-                        style: TextStyle(
+                        nombreCompleto.isNotEmpty
+                            ? nombreCompleto
+                            : 'Sin nombre',
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF00C1D4), // Cambiamos a #00C1D4
+                          color: Color(0xFF00C1D4), // Mantener el mismo color
                         ),
                       ),
                     ],
@@ -332,8 +433,8 @@ class _InfoDtPacienteCaptacionState extends State<InfoDtPacienteCaptacion> {
                                     Icon(Icons.edit, color: Color(0xFF00C1D4)),
                                     SizedBox(width: 10),
                                     Icon(Icons.copy,
-                                        color:
-                                            Color(0xFF00C1D4)), // Icono de copiar
+                                        color: Color(
+                                            0xFF00C1D4)), // Icono de copiar
                                   ],
                                 ),
                               ],
@@ -346,62 +447,88 @@ class _InfoDtPacienteCaptacionState extends State<InfoDtPacienteCaptacion> {
                                   0: FlexColumnWidth(2),
                                   1: FlexColumnWidth(2),
                                 },
-                                children: const [
+                                children: [
                                   TableRow(
                                     children: [
                                       _PatientInfoRow(
                                           label: 'Código expediente único',
-                                          value: '406EJBRM07058501'),
+                                          value: persona['codigo_expediente']
+                                                  ?.toString() ??
+                                              'Sin dato'),
                                       _PatientInfoRow(
                                           label: 'Teléfono',
-                                          value: '+505 8844 7402'),
+                                          value:
+                                              persona['telefono']?.toString() ??
+                                                  'Sin dato'),
                                     ],
                                   ),
                                   TableRow(
                                     children: [
                                       _PatientInfoRow(
                                           label: 'Nº de cédula',
-                                          value: '001070357000H'),
+                                          value:
+                                              persona['cedula']?.toString() ??
+                                                  'Sin cédula'),
                                       _PatientInfoRow(
                                           label: 'Estado civil',
-                                          value: 'Soltero(a)'),
+                                          value: persona['estado_civil']
+                                                  ?.toString() ??
+                                              'Sin dato'),
                                     ],
                                   ),
                                   TableRow(
                                     children: [
                                       _PatientInfoRow(
                                           label: 'Fecha de nacimiento',
-                                          value: '2001-07-07'),
+                                          value: persona['fecha_nacimiento']
+                                                  ?.toString() ??
+                                              'Sin dato'),
                                       _PatientInfoRow(
-                                          label: 'Etnia', value: 'Chorotega'),
+                                          label: 'Etnia',
+                                          value: persona['grupo_etnico']
+                                                  ?.toString() ??
+                                              'Sin dato'),
                                     ],
                                   ),
                                   TableRow(
                                     children: [
                                       _PatientInfoRow(
-                                          label: 'Edad', value: '23 años'),
+                                          label: 'Edad',
+                                          value: calcularEdad(persona[
+                                                  'fecha_nacimiento']) ??
+                                              'Sin dato'),
                                       _PatientInfoRow(
                                           label: 'Ocupación',
-                                          value: 'Ingeniero en Sistemas'),
+                                          value: persona['ocupacion']
+                                                  ?.toString() ??
+                                              'Sin dato'),
                                     ],
                                   ),
                                   TableRow(
                                     children: [
                                       _PatientInfoRow(
                                           label: 'Sexo',
-                                          value: 'No identificado'),
+                                          value: persona['sexo']?.toString() ??
+                                              'Sin dato'),
                                       _PatientInfoRow(
                                           label: 'Lugar de nacimiento',
-                                          value: 'Juigalpa, Chontales, Nic.'),
+                                          value: persona['direccion_domicilio']
+                                                  ?.toString() ??
+                                              'Sin dato'),
                                     ],
                                   ),
                                   TableRow(
                                     children: [
                                       _PatientInfoRow(
-                                          label: 'Tipo de sangre', value: 'O+'),
+                                          label: 'Tipo de sangre',
+                                          value: persona['tipo_telefono']
+                                                  ?.toString() ??
+                                              'Sin dato'),
                                       _PatientInfoRow(
                                           label: 'Residencia actual',
-                                          value: 'Managua, Managua, Nic.'),
+                                          value: persona['direccion_domicilio']
+                                                  ?.toString() ??
+                                              'Sin dato'),
                                     ],
                                   ),
                                 ],
@@ -485,7 +612,8 @@ class _InfoDtPacienteCaptacionState extends State<InfoDtPacienteCaptacion> {
 
                               // Control de paginado
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   // Botón de retroceder página
                                   IconButton(
