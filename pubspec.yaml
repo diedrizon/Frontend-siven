@@ -22,6 +22,11 @@ dependencies:
   flutter_map: ^4.0.0
   latlong2: ^0.8.1
   collection: ^1.15.0
+  shared_preferences: ^2.1.0
+  sqflite: ^2.3.0
+  path: ^1.8.3
+  connectivity_plus: ^4.0.0
+  geojson: ^1.0.0
 
 
 dev_dependencies:
@@ -51,3 +56,22 @@ flutter:
     - lib/assets/homeicon/clinica.webp
     - lib/assets/homeicon/usuario.webp
     - lib/assets/homeicon/siven.webp
+    - lib/assets/GeoJson/Boaco.geojson
+    - lib/assets/GeoJson/Carazo.geojson
+    - lib/assets/GeoJson/Chinandega.geojson
+    - lib/assets/GeoJson/Chontales.geojson
+    - lib/assets/GeoJson/Estelí.geojson
+    - lib/assets/GeoJson/Granada.geojson
+    - lib/assets/GeoJson/Jinotega.geojson
+    - lib/assets/GeoJson/León.geojson
+    - lib/assets/GeoJson/Madriz.geojson
+    - lib/assets/GeoJson/Managua.geojson
+    - lib/assets/GeoJson/Masaya.geojson
+    - lib/assets/GeoJson/Matagalpa.geojson
+    - lib/assets/GeoJson/Nueva_Segovia.geojson
+    - lib/assets/GeoJson/Región_Autónoma_de_la_Costa_Caribe_Norte.geojson
+    - lib/assets/GeoJson/Región_Autónoma_de_la_Costa_Caribe_Sur.geojson
+    - lib/assets/GeoJson/Río_San_Juan.geojson
+    - lib/assets/GeoJson/Rivas.geojson
+    - lib/assets/GeoJson/ni.json
+
