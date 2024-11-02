@@ -10,7 +10,9 @@ import 'package:siven_app/core/services/Maternidadservice.dart';
 import 'package:siven_app/core/services/selection_storage_service.dart';
 import 'package:siven_app/widgets/version.dart';
 import 'package:siven_app/widgets/Encabezado_reporte_analisis.dart';
-import 'package:siven_app/widgets/TextField.dart'; // Asegúrate de que este widget maneje dropdowns correctamente
+import 'package:siven_app/widgets/TextField.dart';
+
+import 'package:siven_app/widgets/seleccion_red_servicio_trabajador_widget.dart'; // Importa el widget
 
 class Captacion extends StatefulWidget {
   const Captacion({Key? key}) : super(key: key);
@@ -210,6 +212,33 @@ class _CaptacionState extends State<Captacion> {
       setState(() {
         errorEventosSalud = e.toString();
         isLoadingEventosSalud = false;
+      });
+    }
+  }
+
+  Future<void> _openSeleccionRedServicioTrabajadorDialog() async {
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+          child: SeleccionRedServicioTrabajadorWidget(
+            catalogService: catalogService,
+            selectionStorageService: selectionStorageService,
+          ),
+        );
+      },
+    );
+
+    // Asigna los resultados del diálogo a los controladores, si el resultado no es nulo.
+    if (result != null) {
+      setState(() {
+        silaisTrabajadorController.text =
+            result['silais'] ?? 'SILAIS no seleccionado';
+        establecimientoTrabajadorController.text =
+            result['establecimiento'] ?? 'Establecimiento no seleccionado';
       });
     }
   }
@@ -663,62 +692,89 @@ class _CaptacionState extends State<Captacion> {
             const SizedBox(height: 20),
 
             // Campo 6: SILAIS del Trabajador (Opción)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'SILAIS del Trabajador *',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                CustomTextFieldDropdown(
-                  hintText: 'Selecciona un SILAIS',
-                  controller: silaisTrabajadorController,
-                  options: [
-                    'SILAIS - ESTELÍ',
-                    'SILAIS - LEÓN',
-                    'SILAIS - MANAGUA'
-                  ],
-                  borderColor: const Color(0xFF00C1D4),
-                  borderRadius: 8.0,
-                  width: double.infinity,
-                  height: 55.0,
-                ),
-              ],
+Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    const Text(
+      'SILAIS del Trabajador *',
+      style: TextStyle(
+        fontSize: 16,
+        color: Colors.black,
+      ),
+    ),
+    const SizedBox(height: 5),
+    Stack(
+      children: [
+        TextField(
+          controller: silaisTrabajadorController,
+          readOnly: true, // Hace el campo de texto no editable para forzar el uso del botón de búsqueda.
+          decoration: InputDecoration(
+            hintText: 'Selecciona un SILAIS',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.0),
+              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
             ),
-            const SizedBox(height: 20),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.0),
+              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.0),
+              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
+            ),
+          ),
+        ),
+        Positioned(
+          right: 8,
+          top: 8,
+          child: IconButton(
+            icon: const Icon(Icons.search, color: Color(0xFF00C1D4)),
+            onPressed: _openSeleccionRedServicioTrabajadorDialog,
+          ),
+        ),
+      ],
+    ),
+  ],
+),
+const SizedBox(height: 20),
 
-            // Campo 7: Establecimiento del Trabajador (Opción)
+
+
+// Campo 7: Establecimiento del Trabajador (Opción)
             Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Establecimiento del Trabajador *',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                CustomTextFieldDropdown(
-                  hintText: 'Selecciona un establecimiento',
-                  controller: establecimientoTrabajadorController,
-                  options: [
-                    'Consultorio Médico Roger Montoya',
-                    'CAPS - León',
-                    'Hospital Nacional San Juan de Dios'
-                  ],
-                  borderColor: const Color(0xFF00C1D4),
-                  borderRadius: 8.0,
-                  width: double.infinity,
-                  height: 55.0,
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    const Text(
+      'Establecimiento del Trabajador *',
+      style: TextStyle(
+        fontSize: 16,
+        color: Colors.black,
+      ),
+    ),
+    const SizedBox(height: 5),
+    TextField(
+      controller: establecimientoTrabajadorController,
+      readOnly: true, // Hace que el campo no sea editable
+      decoration: InputDecoration(
+        hintText: 'Selecciona un establecimiento',
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8.0),
+          borderSide: const BorderSide(color: Color(0xFF00C1D4)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8.0),
+          borderSide: const BorderSide(color: Color(0xFF00C1D4)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8.0),
+          borderSide: const BorderSide(color: Color(0xFF00C1D4)),
+        ),
+      ),
+    ),
+  ],
+),
+const SizedBox(height: 20),
+
 
             // Campo 8: ¿Tiene Comorbilidades? (Opción)
             Column(
