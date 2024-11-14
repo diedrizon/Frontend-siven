@@ -7,10 +7,8 @@ class PersonaService {
 
   PersonaService({required this.httpService});
 
-  // Método para listar todas las personas
   Future<List<Map<String, dynamic>>> listarPersonas() async {
     String url = '$BASE_URL/v1/catalogo/persona/list-personas';
-
     final response = await httpService.get(url);
 
     if (response.statusCode == 200) {
@@ -49,11 +47,25 @@ class PersonaService {
     }
   }
 
-  // Método para buscar personas por coincidencia de cédula o expediente
+  Future<List<Map<String, dynamic>>> buscarPersonasPorNombreOApellido(String busqueda) async {
+    List<Map<String, dynamic>> personas = await listarPersonas();
+    final busquedaLower = busqueda.toLowerCase();
+
+    return personas.where((persona) {
+      final primerNombre = persona['primer_nombre']?.toString().toLowerCase() ?? '';
+      final segundoNombre = persona['segundo_nombre']?.toString().toLowerCase() ?? '';
+      final primerApellido = persona['primer_apellido']?.toString().toLowerCase() ?? '';
+      final segundoApellido = persona['segundo_apellido']?.toString().toLowerCase() ?? '';
+
+      return primerNombre.contains(busquedaLower) ||
+             segundoNombre.contains(busquedaLower) ||
+             primerApellido.contains(busquedaLower) ||
+             segundoApellido.contains(busquedaLower);
+    }).toList();
+  }
+
   Future<List<Map<String, dynamic>>> buscarPersonasPorCedulaOExpediente(String busqueda) async {
     List<Map<String, dynamic>> personas = await listarPersonas();
-
-    // Filtrar todas las personas cuya cédula o código de expediente contenga la búsqueda
     return personas.where((persona) {
       return persona['cedula'].toString().contains(busqueda) ||
              persona['codigo_expediente'].toString().contains(busqueda);

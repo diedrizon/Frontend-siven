@@ -1,43 +1,117 @@
 import 'package:flutter/material.dart';
-import 'package:siven_app/widgets/version.dart'; // Widget reutilizado
-import 'package:siven_app/widgets/Encabezado_reporte_analisis.dart'; // Widget reutilizado
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:siven_app/widgets/version.dart';
+import 'package:siven_app/widgets/Encabezado_reporte_analisis.dart';
 import 'package:siven_app/core/services/catalogo_service_red_servicio.dart';
 import 'package:siven_app/core/services/selection_storage_service.dart';
 import 'package:siven_app/core/services/http_service.dart';
+import 'package:siven_app/core/services/PersonaService.dart';
 import 'package:http/http.dart' as http;
 
 class BusquedaPorNombreScreen extends StatefulWidget {
   const BusquedaPorNombreScreen({Key? key}) : super(key: key);
 
   @override
-  _BusquedaPorNombreScreenState createState() =>
-      _BusquedaPorNombreScreenState();
+  _BusquedaPorNombreScreenState createState() => _BusquedaPorNombreScreenState();
 }
 
 class _BusquedaPorNombreScreenState extends State<BusquedaPorNombreScreen> {
-  // Declaración de servicios
   late CatalogServiceRedServicio catalogService;
   late SelectionStorageService selectionStorageService;
+  late PersonaService personaService;
+
+  // Controladores para campos de texto
+  TextEditingController primerNombreController = TextEditingController();
+  TextEditingController segundoNombreController = TextEditingController();
+  TextEditingController primerApellidoController = TextEditingController();
+  TextEditingController segundoApellidoController = TextEditingController();
+
+  List<Map<String, dynamic>> resultados = [];
 
   @override
   void initState() {
     super.initState();
-
-    // Inicialización de servicios
     initializeServices();
+    _loadSavedData();  // Cargar los datos guardados cuando se carga la pantalla
   }
 
+  // Inicializar servicios
   void initializeServices() {
     final httpClient = http.Client();
     final httpService = HttpService(httpClient: httpClient);
-
     catalogService = CatalogServiceRedServicio(httpService: httpService);
     selectionStorageService = SelectionStorageService();
+    personaService = PersonaService(httpService: httpService);
+  }
+
+  // Cargar los datos de shared_preferences
+  Future<void> _loadSavedData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      primerNombreController.text = prefs.getString('primerNombre') ?? '';
+      segundoNombreController.text = prefs.getString('segundoNombre') ?? '';
+      primerApellidoController.text = prefs.getString('primerApellido') ?? '';
+      segundoApellidoController.text = prefs.getString('segundoApellido') ?? '';
+    });
+  }
+
+  // Guardar los datos en shared_preferences
+  Future<void> _saveData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('primerNombre', primerNombreController.text);
+    await prefs.setString('segundoNombre', segundoNombreController.text);
+    await prefs.setString('primerApellido', primerApellidoController.text);
+    await prefs.setString('segundoApellido', segundoApellidoController.text);
+  }
+
+  // Método para buscar personas por coincidencia de nombre o apellido
+  void buscarPorNombreOApellido() async {
+    try {
+      String primerNombre = primerNombreController.text.trim().toLowerCase();
+      String segundoNombre = segundoNombreController.text.trim().toLowerCase();
+      String primerApellido = primerApellidoController.text.trim().toLowerCase();
+      String segundoApellido = segundoApellidoController.text.trim().toLowerCase();
+
+      List<String> terminosBusqueda = [];
+
+      if (primerNombre.isNotEmpty) terminosBusqueda.add(primerNombre);
+      if (segundoNombre.isNotEmpty) terminosBusqueda.add(segundoNombre);
+      if (primerApellido.isNotEmpty) terminosBusqueda.add(primerApellido);
+      if (segundoApellido.isNotEmpty) terminosBusqueda.add(segundoApellido);
+
+      if (terminosBusqueda.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Debe ingresar al menos un campo para realizar la búsqueda.'))
+        );
+        return;
+      }
+
+      List<Map<String, dynamic>> resultado = await personaService.buscarPersonasPorNombreOApellido(terminosBusqueda.join(" "));
+
+      if (resultado.isNotEmpty) {
+        setState(() {
+          resultados = resultado;
+        });
+
+        Navigator.pushNamed(
+          context,
+          '/captacion_resultado_busqueda',
+          arguments: resultados, // Se envía la lista de resultados
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se encontraron resultados.'))
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error al buscar personas.'))
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -46,8 +120,7 @@ class _BusquedaPorNombreScreenState extends State<BusquedaPorNombreScreen> {
         leading: Padding(
           padding: const EdgeInsets.only(top: 13.0),
           child: IconButton(
-            icon:
-                const Icon(Icons.arrow_back, color: Color(0xFF1877F2), size: 32),
+            icon: const Icon(Icons.arrow_back, color: Color(0xFF1877F2), size: 32),
             onPressed: () {
               Navigator.pushNamed(context, '/captacion_busqeda_persona');
             },
@@ -58,7 +131,6 @@ class _BusquedaPorNombreScreenState extends State<BusquedaPorNombreScreen> {
       ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        // Distribuir widgets con espacio entre ellos
         children: [
           Expanded(
             child: SingleChildScrollView(
@@ -66,7 +138,6 @@ class _BusquedaPorNombreScreenState extends State<BusquedaPorNombreScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Uso de los widgets pasando los servicios
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -83,8 +154,6 @@ class _BusquedaPorNombreScreenState extends State<BusquedaPorNombreScreen> {
                     selectionStorageService: selectionStorageService,
                   ),
                   const SizedBox(height: 30),
-
-                  // Título "Búsqueda por nombre" con ícono de lupa
                   Row(
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: const [
@@ -101,14 +170,14 @@ class _BusquedaPorNombreScreenState extends State<BusquedaPorNombreScreen> {
                     ],
                   ),
                   const SizedBox(height: 30),
-
-                  // Campos de texto (2x2 grid)
                   Row(
                     children: [
                       Expanded(
                         child: Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: TextFormField(
+                            controller: primerNombreController,
+                            onChanged: (value) => _saveData(), // Guardar cuando cambia
                             decoration: InputDecoration(
                               labelText: 'Primer nombre*',
                               border: OutlineInputBorder(
@@ -131,6 +200,8 @@ class _BusquedaPorNombreScreenState extends State<BusquedaPorNombreScreen> {
                         child: Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: TextFormField(
+                            controller: primerApellidoController,
+                            onChanged: (value) => _saveData(), // Guardar cuando cambia
                             decoration: InputDecoration(
                               labelText: 'Primer apellido*',
                               border: OutlineInputBorder(
@@ -157,6 +228,8 @@ class _BusquedaPorNombreScreenState extends State<BusquedaPorNombreScreen> {
                         child: Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: TextFormField(
+                            controller: segundoNombreController,
+                            onChanged: (value) => _saveData(), // Guardar cuando cambia
                             decoration: InputDecoration(
                               labelText: 'Segundo nombre',
                               border: OutlineInputBorder(
@@ -179,6 +252,8 @@ class _BusquedaPorNombreScreenState extends State<BusquedaPorNombreScreen> {
                         child: Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: TextFormField(
+                            controller: segundoApellidoController,
+                            onChanged: (value) => _saveData(), // Guardar cuando cambia
                             decoration: InputDecoration(
                               labelText: 'Segundo apellido',
                               border: OutlineInputBorder(
@@ -200,20 +275,13 @@ class _BusquedaPorNombreScreenState extends State<BusquedaPorNombreScreen> {
                     ],
                   ),
                   const SizedBox(height: 10),
-
-                  // Texto informativo
                   const Text(
                     'Los campos marcados con * son requeridos',
                     style: TextStyle(color: Color(0xFFBDC3C7)),
                   ),
                   const SizedBox(height: 30),
-
-                  // Botón Buscar reutilizado
                   ElevatedButton(
-                    onPressed: () {
-                      // Navegación a captacion_resultado_busqueda
-                      Navigator.pushNamed(context, '/captacion_resultado_busqueda');
-                    },
+                    onPressed: buscarPorNombreOApellido,
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 50),
                       backgroundColor: const Color(0xFF00BCD4),
@@ -234,7 +302,7 @@ class _BusquedaPorNombreScreenState extends State<BusquedaPorNombreScreen> {
               ),
             ),
           ),
-          const VersionWidget(), // Widget de la versión en la parte inferior
+          const VersionWidget(),
         ],
       ),
     );
@@ -244,5 +312,6 @@ class _BusquedaPorNombreScreenState extends State<BusquedaPorNombreScreen> {
 void main() {
   runApp(const MaterialApp(
     home: BusquedaPorNombreScreen(),
+    debugShowCheckedModeBanner: false,
   ));
 }
