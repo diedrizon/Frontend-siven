@@ -86,7 +86,8 @@ class _HomeState extends State<Home> {
         leading: Padding(
           padding: const EdgeInsets.only(top: 13.0),
           child: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Color(0xFF1877F2), size: 32),
+            icon: const Icon(Icons.arrow_back,
+                color: Color(0xFF1877F2), size: 32),
             onPressed: () {
               // Navega a la pantalla red_servicio
               Navigator.pushNamed(context, '/red_servicio');
@@ -112,7 +113,8 @@ class _HomeState extends State<Home> {
                       BotonCentroSalud(
                         catalogService: catalogService,
                         selectionStorageService: selectionStorageService,
-                        onSelectionChanged: _onSelectionChanged, // Añadido para actualizar la pantalla
+                        onSelectionChanged:
+                            _onSelectionChanged, // Añadido para actualizar la pantalla
                       ),
                       const IconoPerfil(),
                     ],
@@ -129,20 +131,29 @@ class _HomeState extends State<Home> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: cardItems.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 20),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 20),
                     itemBuilder: (context, index) {
                       return CustomCard(
                         item: cardItems[index],
                         screenHeight: screenSize.height,
                         onTap: () {
                           // Navegación específica según el texto de la tarjeta
-                          if (cardItems[index].text == "REGISTRO Y SEGUIMIENTO DE DATOS EPIDEMIOLÓGICOS") {
-                            Navigator.pushNamed(context, '/captacion_busqeda_persona');
-                          } else if (cardItems[index].text == "REPORTES Y ANÁLISIS") {
+                          if (cardItems[index].text ==
+                              "REGISTRO Y SEGUIMIENTO DE DATOS EPIDEMIOLÓGICOS") {
+                            Navigator.pushNamed(
+                                context, '/captacion_busqeda_persona');
+                          } else if (cardItems[index].text ==
+                              "REPORTES Y ANÁLISIS") {
                             Navigator.pushNamed(context, '/FiltrarReporte');
-                          } else if (cardItems[index].text == "ALERTAS TEMPRANAS") {
+                          } else if (cardItems[index].text ==
+                              "ALERTAS TEMPRANAS") {
                             Navigator.pushNamed(context, '/alerta_temprana');
+                          } else if (cardItems[index].text ==
+                              "GESTIÓN DE JORNADAS DE VIGILANCIA EPIDEMIOLÓGICA") {
+                            Navigator.pushNamed(context, '/gestion_jornadas');
                           }
+
                           // Puedes agregar más condiciones para otras tarjetas si lo deseas
                         },
                       );

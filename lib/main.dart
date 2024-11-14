@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'features/gestionJornadas/gestion_jornadas.dart';
 import 'features/login/Login.dart';
 import 'features/home/Home.dart';
 import 'features/red_de_servicio_screen.dart';
@@ -23,19 +24,22 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'SIVEN App',
-      initialRoute: '/login', 
+      initialRoute: '/login',
       routes: {
-        '/login': (context) => LoginScreen(), 
+        '/login': (context) => LoginScreen(),
         '/home': (context) => Home(),
-        '/FiltrarReporte': (context) => SearchScreen(), 
-        '/red_servicio': (context) => RedDeServicioScreen(), 
+        '/FiltrarReporte': (context) => SearchScreen(),
+        '/red_servicio': (context) => RedDeServicioScreen(),
         '/analisis': (context) => AnalisisApp(),
         '/alerta_temprana': (context) => AlertaTemprana(),
         '/captacion_busqeda_persona': (context) => CaptacionBusquedaPersona(),
-        '/captacion_busqueda_por_nombre': (context) => BusquedaPorNombreScreen(),
-        '/captacion_resultado_busqueda': (context) => CaptacionResultadoBusqueda(),
+        '/captacion_busqueda_por_nombre': (context) =>
+            BusquedaPorNombreScreen(),
+        '/captacion_resultado_busqueda': (context) =>
+            CaptacionResultadoBusqueda(),
         '/captacion_inf_paciente': (context) => InfoDtPacienteCaptacion(),
-        '/captacion' : (context) => Captacion(),
+        '/captacion': (context) => Captacion(),
+        '/gestion_jornadas': (context) => GestionJornadas(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/resultados_busqueda') {
