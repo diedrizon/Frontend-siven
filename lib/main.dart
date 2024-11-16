@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'features/gestionJornadas/gestion_jornadas.dart';
 import 'features/login/Login.dart';
 import 'features/home/Home.dart';
 import 'features/red_de_servicio_screen.dart';
@@ -36,6 +37,7 @@ class MyApp extends StatelessWidget {
             CaptacionResultadoBusqueda(),
         '/captacion_inf_paciente': (context) => InfoDtPacienteCaptacion(),
         '/captacion': (context) => Captacion(),
+        '/gestion_jornadas': (context) => GestionJornadas(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/resultados_busqueda') {

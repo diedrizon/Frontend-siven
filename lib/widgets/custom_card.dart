@@ -17,8 +17,10 @@ class CardItem {
 /// Widget personalizado para crear una tarjeta con diseño específico.
 class CustomCard extends StatelessWidget {
   final CardItem item; // Elemento de tarjeta que se va a mostrar.
-  final double screenHeight; // Altura de la pantalla para ajustar el tamaño de la tarjeta.
-  final VoidCallback? onTap; // Añadir esta línea para manejar toques en la tarjeta.
+  final double
+      screenHeight; // Altura de la pantalla para ajustar el tamaño de la tarjeta.
+  final VoidCallback?
+      onTap; // Añadir esta línea para manejar toques en la tarjeta.
 
   /// Constructor de CustomCard con parámetros requeridos.
   CustomCard({required this.item, required this.screenHeight, this.onTap});
@@ -29,10 +31,12 @@ class CustomCard extends StatelessWidget {
       onTap: onTap, // Usa el callback aquí para manejar el toque en la tarjeta.
       child: Container(
         width: double.infinity, // Ancho completo del contenedor.
-        height: screenHeight * 0.22, // Altura adaptada al 22% de la altura de la pantalla.
+        height: screenHeight *
+            0.22, // Altura adaptada al 22% de la altura de la pantalla.
         decoration: BoxDecoration(
           color: item.backgroundColor, // Color de fondo de la tarjeta.
-          borderRadius: BorderRadius.circular(10), // Bordes redondeados de la tarjeta.
+          borderRadius:
+              BorderRadius.circular(10), // Bordes redondeados de la tarjeta.
           boxShadow: [
             BoxShadow(
               color: Colors.black26, // Color de la sombra.
@@ -43,10 +47,13 @@ class CustomCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            SizedBox(width: 16), // Espaciador horizontal a la izquierda para el padding.
+            SizedBox(
+                width:
+                    16), // Espaciador horizontal a la izquierda para el padding.
             Expanded(
               child: Align(
-                alignment: Alignment.centerLeft, // Alinea el texto a la izquierda.
+                alignment:
+                    Alignment.centerLeft, // Alinea el texto a la izquierda.
                 child: Text(
                   item.text, // Texto de la tarjeta.
                   style: TextStyle(
@@ -55,12 +62,14 @@ class CustomCard extends StatelessWidget {
                     fontWeight: FontWeight.bold, // Grosor de la fuente.
                   ),
                   maxLines: 3, // Número máximo de líneas.
-                  overflow: TextOverflow.ellipsis, // Indicador de desbordamiento.
+                  overflow:
+                      TextOverflow.ellipsis, // Indicador de desbordamiento.
                 ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.only(right: 16.0), // Padding a la derecha del ícono.
+              padding: const EdgeInsets.only(
+                  right: 16.0), // Padding a la derecha del ícono.
               child: Image.asset(
                 item.iconPath, // Ruta del ícono.
                 width: 100, // Ancho del ícono.
