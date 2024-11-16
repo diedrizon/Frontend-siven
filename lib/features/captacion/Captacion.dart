@@ -74,6 +74,10 @@ class _CaptacionState extends State<Captacion> {
   bool isLoadingMaternidad = true;
   String? errorMaternidad;
 
+  bool _hasComorbilidades = false;
+
+  bool _isTrabajadorSalud = false;
+
   // Controladores para la primera tarjeta
   final TextEditingController eventoSaludController = TextEditingController();
   final TextEditingController personaController = TextEditingController();
@@ -187,6 +191,28 @@ class _CaptacionState extends State<Captacion> {
     fetchEventosSalud();
 
     fetchMaternidadOptions();
+
+    tieneComorbilidadesController.addListener(_updateHasComorbilidades);
+
+    esTrabajadorSaludController.addListener(_updateIsTrabajadorSalud);
+  }
+
+  // Método para actualizar la variable de estado
+  void _updateHasComorbilidades() {
+    setState(() {
+      _hasComorbilidades = tieneComorbilidadesController.text == 'Sí';
+    });
+  }
+
+  // Método para actualizar la variable de estado para Trabajador de la Salud
+  void _updateIsTrabajadorSalud() {
+    setState(() {
+      _isTrabajadorSalud = esTrabajadorSaludController.text == 'Sí';
+      if (!_isTrabajadorSalud) {
+        silaisTrabajadorController.clear();
+        establecimientoTrabajadorController.clear();
+      }
+    });
   }
 
   void initializeServices() {
@@ -268,10 +294,10 @@ class _CaptacionState extends State<Captacion> {
     maternidadController.dispose();
 
     semanasGestacionController.dispose();
-    esTrabajadorSaludController.dispose();
+    esTrabajadorSaludController.removeListener(_updateIsTrabajadorSalud);
     silaisTrabajadorController.dispose();
     establecimientoTrabajadorController.dispose();
-    tieneComorbilidadesController.dispose();
+    tieneComorbilidadesController.removeListener(_updateHasComorbilidades);
     comorbilidadesController.dispose();
     nombreJefeFamiliaController.dispose();
     telefonoReferenciaController.dispose();
@@ -686,95 +712,139 @@ class _CaptacionState extends State<Captacion> {
                   borderRadius: 8.0,
                   width: double.infinity,
                   height: 55.0,
+                  onChanged: (value) {
+                    setState(() {
+                      _isTrabajadorSalud = value == 'Sí';
+                      if (!_isTrabajadorSalud) {
+                        silaisTrabajadorController.clear();
+                        establecimientoTrabajadorController.clear();
+                      }
+                    });
+                  },
                 ),
               ],
             ),
             const SizedBox(height: 20),
 
-            // Campo 6: SILAIS del Trabajador (Opción)
-Column(
-  crossAxisAlignment: CrossAxisAlignment.start,
-  children: [
-    const Text(
-      'SILAIS del Trabajador *',
-      style: TextStyle(
-        fontSize: 16,
-        color: Colors.black,
-      ),
-    ),
-    const SizedBox(height: 5),
-    Stack(
-      children: [
-        TextField(
-          controller: silaisTrabajadorController,
-          readOnly: true, // Hace el campo de texto no editable para forzar el uso del botón de búsqueda.
-          decoration: InputDecoration(
-            hintText: 'Selecciona un SILAIS',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
-            ),
-          ),
-        ),
-        Positioned(
-          right: 8,
-          top: 8,
-          child: IconButton(
-            icon: const Icon(Icons.search, color: Color(0xFF00C1D4)),
-            onPressed: _openSeleccionRedServicioTrabajadorDialog,
-          ),
-        ),
-      ],
-    ),
-  ],
-),
-const SizedBox(height: 20),
+// Campo 6: SILAIS del Trabajador (Opción) - Condicional
+            if (_isTrabajadorSalud) ...[
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'SILAIS del Trabajador *',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  SizedBox(
+                    height:
+                        55.0, // Asegura que la altura coincida con otros campos
+                    child: Stack(
+                      children: [
+                        TextField(
+                          controller: silaisTrabajadorController,
+                          readOnly:
+                              true, // Hace el campo de texto no editable para forzar el uso del botón de búsqueda.
+                          decoration: InputDecoration(
+                            hintText: 'Selecciona un SILAIS',
+                            contentPadding: const EdgeInsets.symmetric(
+                                vertical: 15.0, horizontal: 10.0),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8.0),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF00C1D4),
+                                width:
+                                    2.0, // Ajusta el grosor según sea necesario
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8.0),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF00C1D4),
+                                width:
+                                    2.0, // Ajusta el grosor según sea necesario
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8.0),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF00C1D4),
+                                width:
+                                    2.0, // Ajusta el grosor según sea necesario
+                              ),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          right: 8,
+                          top: 8,
+                          child: IconButton(
+                            icon: const Icon(Icons.search,
+                                color: Color(0xFF00C1D4)),
+                            onPressed:
+                                _openSeleccionRedServicioTrabajadorDialog,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
 
-
-
-// Campo 7: Establecimiento del Trabajador (Opción)
-            Column(
-  crossAxisAlignment: CrossAxisAlignment.start,
-  children: [
-    const Text(
-      'Establecimiento del Trabajador *',
-      style: TextStyle(
-        fontSize: 16,
-        color: Colors.black,
-      ),
-    ),
-    const SizedBox(height: 5),
-    TextField(
-      controller: establecimientoTrabajadorController,
-      readOnly: true, // Hace que el campo no sea editable
-      decoration: InputDecoration(
-        hintText: 'Selecciona un establecimiento',
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8.0),
-          borderSide: const BorderSide(color: Color(0xFF00C1D4)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8.0),
-          borderSide: const BorderSide(color: Color(0xFF00C1D4)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8.0),
-          borderSide: const BorderSide(color: Color(0xFF00C1D4)),
-        ),
-      ),
-    ),
-  ],
-),
-const SizedBox(height: 20),
-
+              // Campo 7: Establecimiento del Trabajador (Opción) - Condicional
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Establecimiento del Trabajador *',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  SizedBox(
+                    height:
+                        55.0, // Asegura que la altura coincida con otros campos
+                    child: TextField(
+                      controller: establecimientoTrabajadorController,
+                      readOnly: true, // Hace que el campo no sea editable
+                      decoration: InputDecoration(
+                        hintText: 'Selecciona un establecimiento',
+                        contentPadding: const EdgeInsets.symmetric(
+                            vertical: 15.0, horizontal: 10.0),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8.0),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF00C1D4),
+                            width: 2.0, // Ajusta el grosor según sea necesario
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8.0),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF00C1D4),
+                            width: 2.0, // Ajusta el grosor según sea necesario
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8.0),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF00C1D4),
+                            width: 2.0, // Ajusta el grosor según sea necesario
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+            ],
 
             // Campo 8: ¿Tiene Comorbilidades? (Opción)
             Column(
@@ -801,35 +871,37 @@ const SizedBox(height: 20),
             ),
             const SizedBox(height: 20),
 
-            // Campo 9: Comorbilidades (Opción)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Comorbilidades *',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.black,
+            // Campo 9: Comorbilidades (Opción) - Condicional
+            if (_hasComorbilidades) ...[
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Comorbilidades *',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 5),
-                CustomTextFieldDropdown(
-                  hintText: 'Selecciona una comorbilidad',
-                  controller: comorbilidadesController,
-                  options: [
-                    'Diabetes',
-                    'Hipertensión',
-                    'Enfermedad Pulmonar',
-                    'Otra'
-                  ],
-                  borderColor: const Color(0xFF00C1D4),
-                  borderRadius: 8.0,
-                  width: double.infinity,
-                  height: 55.0,
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
+                  const SizedBox(height: 5),
+                  CustomTextFieldDropdown(
+                    hintText: 'Selecciona una comorbilidad',
+                    controller: comorbilidadesController,
+                    options: [
+                      'Diabetes',
+                      'Hipertensión',
+                      'Enfermedad Pulmonar',
+                      'Otra'
+                    ],
+                    borderColor: const Color(0xFF00C1D4),
+                    borderRadius: 8.0,
+                    width: double.infinity,
+                    height: 55.0,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+            ],
 
             // Campo 10: Nombre del Jefe de Familia (Texto)
             Column(

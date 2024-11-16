@@ -4,7 +4,6 @@ import 'features/home/Home.dart';
 import 'features/red_de_servicio_screen.dart';
 import 'features/search/search_screen.dart';
 import 'features/search/ResultadosBusquedaScreen.dart';
-import 'features/search/Analisis.dart';
 import 'features/Notificationsearch/alerta_temprana.dart';
 import 'features/captacion/captacion_busqueda_persona.dart';
 import 'features/captacion/buscar_por_nombre.dart';
@@ -23,19 +22,20 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'SIVEN App',
-      initialRoute: '/login', 
+      initialRoute: '/login',
       routes: {
-        '/login': (context) => LoginScreen(), 
+        '/login': (context) => LoginScreen(),
         '/home': (context) => Home(),
-        '/FiltrarReporte': (context) => SearchScreen(), 
-        '/red_servicio': (context) => RedDeServicioScreen(), 
-        '/analisis': (context) => AnalisisApp(),
+        '/FiltrarReporte': (context) => SearchScreen(),
+        '/red_servicio': (context) => RedDeServicioScreen(),
         '/alerta_temprana': (context) => AlertaTemprana(),
         '/captacion_busqeda_persona': (context) => CaptacionBusquedaPersona(),
-        '/captacion_busqueda_por_nombre': (context) => BusquedaPorNombreScreen(),
-        '/captacion_resultado_busqueda': (context) => CaptacionResultadoBusqueda(),
+        '/captacion_busqueda_por_nombre': (context) =>
+            BusquedaPorNombreScreen(),
+        '/captacion_resultado_busqueda': (context) =>
+            CaptacionResultadoBusqueda(),
         '/captacion_inf_paciente': (context) => InfoDtPacienteCaptacion(),
-        '/captacion' : (context) => Captacion(),
+        '/captacion': (context) => Captacion(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/resultados_busqueda') {

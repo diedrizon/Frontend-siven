@@ -33,55 +33,60 @@ class _RedDeServicioWidgetState extends State<RedDeServicioWidget> {
 
   Future<void> _loadSilais() async {
     try {
-      final silaisData = await widget.catalogService.getAllSilais();
-      if (mounted) {
+      // Primero verifica si los datos están en caché
+      final cachedSilais = await widget.selectionStorageService.getSilaisListCache();
+      if (cachedSilais != null && cachedSilais.isNotEmpty) {
+        setState(() {
+          silaisList = cachedSilais;
+        });
+      } else {
+        // Si no están en caché, carga los datos de la API y almacénalos
+        final silaisData = await widget.catalogService.getAllSilais();
         setState(() {
           silaisList = silaisData;
         });
+        await widget.selectionStorageService.saveSilaisListCache(silaisData);
       }
     } catch (e) {
       print('Error al cargar SILAIS: $e');
     }
   }
 
-  // Cargar la lista de establecimientos de base al SILAIS seleccionado
   Future<void> _loadEstablecimientos(int idSilais) async {
     try {
-      final establecimientosData =
-          await widget.catalogService.getEstablecimientosBySilais(idSilais);
-      if (mounted) {
+      // Verifica si los establecimientos están en caché para el SILAIS seleccionado
+      final cachedEstablecimientos = await widget.selectionStorageService.getEstablecimientosCache(idSilais);
+      if (cachedEstablecimientos != null && cachedEstablecimientos.isNotEmpty) {
+        setState(() {
+          establecimientosList = cachedEstablecimientos;
+        });
+      } else {
+        // Si no están en caché, carga los datos de la API y almacénalos
+        final establecimientosData = await widget.catalogService.getEstablecimientosBySilais(idSilais);
         setState(() {
           establecimientosList = establecimientosData;
         });
+        await widget.selectionStorageService.saveEstablecimientosCache(idSilais, establecimientosData);
       }
     } catch (e) {
       print('Error al cargar establecimientos: $e');
     }
   }
 
-  // Controlar la carga de SILAIS y cache
   Future<void> _initializeData() async {
-    // Cargar las selecciones guardadas
-    final cachedSilaisId =
-        await widget.selectionStorageService.getSelectedSilais();
-    final cachedUnidadSaludId =
-        await widget.selectionStorageService.getSelectedUnidadSalud();
+    final cachedSilaisId = await widget.selectionStorageService.getSelectedSilais();
+    final cachedUnidadSaludId = await widget.selectionStorageService.getSelectedUnidadSalud();
 
-    // Si hay una selección cacheada, cargarla
     if (cachedSilaisId != null && cachedSilaisId.isNotEmpty) {
-      if (!mounted) return; // Verificar si el widget sigue montado
       setState(() {
         selectedSilaisId = cachedSilaisId;
         selectedUnidadSaludId = cachedUnidadSaludId?.isNotEmpty == true
             ? cachedUnidadSaludId
             : null;
       });
-
-      // Cargar los establecimientos correspondientes al SILAIS cacheado
       await _loadEstablecimientos(int.parse(cachedSilaisId));
     }
 
-    // Cargar los SILAIS solo si no hay selección previa
     if (selectedSilaisId == null) {
       await _loadSilais();
     }
@@ -124,8 +129,7 @@ class _RedDeServicioWidgetState extends State<RedDeServicioWidget> {
             setState(() {
               selectedUnidadSaludId = val;
             });
-            await widget.selectionStorageService
-                .saveSelectedUnidadSalud(val!);
+            await widget.selectionStorageService.saveSelectedUnidadSalud(val!);
           },
           () {
             setState(() {
@@ -146,7 +150,7 @@ class _RedDeServicioWidgetState extends State<RedDeServicioWidget> {
     TextEditingController controller,
     ValueChanged<String?> onChanged,
     VoidCallback onClearSelection,
-    String idKey, // Clave para el ID ('id_silais' o 'id_establecimiento')
+    String idKey,
   ) {
     return DropdownSearch<Map<String, dynamic>>(
       items: items,
@@ -177,7 +181,10 @@ class _RedDeServicioWidgetState extends State<RedDeServicioWidget> {
         emptyBuilder: (context, searchEntry) => Center(
           child: Text('No hay coincidencias de $label'),
         ),
-        fit: FlexFit.tight,
+        fit: FlexFit.loose,
+        constraints: BoxConstraints(
+          maxHeight: 240,
+        ),
       ),
       itemAsString: (item) => item['nombre'],
       dropdownDecoratorProps: DropDownDecoratorProps(
