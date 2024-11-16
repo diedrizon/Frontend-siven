@@ -1,6 +1,30 @@
-// Archivo: widgets/custom_text_field_dropdown.dart
-
 import 'package:flutter/material.dart';
+
+// Clase singleton para gestionar los dropdowns abiertos
+class DropdownManager {
+  static final DropdownManager _singleton = DropdownManager._internal();
+
+  factory DropdownManager() {
+    return _singleton;
+  }
+
+  DropdownManager._internal();
+
+  _CustomTextFieldDropdownState? _currentOpenDropdown;
+
+  void registerOpenDropdown(_CustomTextFieldDropdownState dropdown) {
+    if (_currentOpenDropdown != null && _currentOpenDropdown != dropdown) {
+      _currentOpenDropdown!._closeDropdown();
+    }
+    _currentOpenDropdown = dropdown;
+  }
+
+  void unregisterOpenDropdown(_CustomTextFieldDropdownState dropdown) {
+    if (_currentOpenDropdown == dropdown) {
+      _currentOpenDropdown = null;
+    }
+  }
+}
 
 class CustomTextFieldDropdown extends StatefulWidget {
   final String hintText;
@@ -11,7 +35,7 @@ class CustomTextFieldDropdown extends StatefulWidget {
   final double borderRadius;
   final double width;
   final double height;
-  final Function(String)? onChanged;  // Nuevo parámetro para manejar los cambios de selección
+  final Function(String)? onChanged;
 
   const CustomTextFieldDropdown({
     Key? key,
@@ -23,11 +47,12 @@ class CustomTextFieldDropdown extends StatefulWidget {
     this.borderRadius = 5.0,
     this.width = double.infinity,
     this.height = 50.0,
-    this.onChanged,  // Asegúrate de incluir onChanged aquí
+    this.onChanged,
   }) : super(key: key);
 
   @override
-  _CustomTextFieldDropdownState createState() => _CustomTextFieldDropdownState();
+  _CustomTextFieldDropdownState createState() =>
+      _CustomTextFieldDropdownState();
 }
 
 class _CustomTextFieldDropdownState extends State<CustomTextFieldDropdown> {
@@ -47,24 +72,37 @@ class _CustomTextFieldDropdownState extends State<CustomTextFieldDropdown> {
   void _openDropdown() {
     _overlayEntry = _createOverlayEntry();
     Overlay.of(context).insert(_overlayEntry!);
+
     setState(() {
       _isDropdownOpen = true;
     });
 
-    // Cerrar el dropdown si se pierde el foco
-    _focusNode.addListener(() {
-      if (!_focusNode.hasFocus) {
-        _closeDropdown();
-      }
-    });
+    // Registrar este dropdown como el abierto actualmente
+    DropdownManager().registerOpenDropdown(this);
+
+    // Escuchar cambios de foco
+    _focusNode.addListener(_handleFocusChange);
   }
 
   void _closeDropdown() {
     _overlayEntry?.remove();
     _overlayEntry = null;
+
     setState(() {
       _isDropdownOpen = false;
     });
+
+    // Remover el listener de foco
+    _focusNode.removeListener(_handleFocusChange);
+
+    // Desregistrar este dropdown
+    DropdownManager().unregisterOpenDropdown(this);
+  }
+
+  void _handleFocusChange() {
+    if (!_focusNode.hasFocus) {
+      _closeDropdown();
+    }
   }
 
   OverlayEntry _createOverlayEntry() {
@@ -146,15 +184,18 @@ class _CustomTextFieldDropdownState extends State<CustomTextFieldDropdown> {
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(widget.borderRadius),
-                borderSide: BorderSide(color: widget.borderColor, width: widget.borderWidth),
+                borderSide: BorderSide(
+                    color: widget.borderColor, width: widget.borderWidth),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(widget.borderRadius),
-                borderSide: BorderSide(color: widget.borderColor, width: widget.borderWidth),
+                borderSide: BorderSide(
+                    color: widget.borderColor, width: widget.borderWidth),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(widget.borderRadius),
-                borderSide: BorderSide(color: widget.borderColor, width: widget.borderWidth),
+                borderSide: BorderSide(
+                    color: widget.borderColor, width: widget.borderWidth),
               ),
             ),
             style: TextStyle(

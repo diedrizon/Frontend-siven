@@ -7,12 +7,16 @@ class PersonaService {
 
   PersonaService({required this.httpService});
 
+  // Listar todas las personas con decodificación en UTF-8
   Future<List<Map<String, dynamic>>> listarPersonas() async {
     String url = '$BASE_URL/v1/catalogo/persona/list-personas';
     final response = await httpService.get(url);
 
     if (response.statusCode == 200) {
-      List<dynamic> jsonResponse = jsonDecode(response.body);
+      // Decodificación UTF-8 para manejar caracteres especiales
+      final decodedResponse = utf8.decode(response.bodyBytes);
+      List<dynamic> jsonResponse = jsonDecode(decodedResponse);
+
       return jsonResponse.map((persona) {
         return {
           'id_persona': persona['id_persona'],
@@ -47,6 +51,7 @@ class PersonaService {
     }
   }
 
+  // Buscar personas por nombre o apellido
   Future<List<Map<String, dynamic>>> buscarPersonasPorNombreOApellido(String busqueda) async {
     List<Map<String, dynamic>> personas = await listarPersonas();
     final busquedaLower = busqueda.toLowerCase();
@@ -64,6 +69,7 @@ class PersonaService {
     }).toList();
   }
 
+  // Buscar personas por cédula o código de expediente
   Future<List<Map<String, dynamic>>> buscarPersonasPorCedulaOExpediente(String busqueda) async {
     List<Map<String, dynamic>> personas = await listarPersonas();
     return personas.where((persona) {
