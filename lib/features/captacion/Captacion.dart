@@ -8,6 +8,9 @@ import 'package:siven_app/core/services/catalogo_service_red_servicio.dart';
 import 'package:siven_app/core/services/Maternidadservice.dart';
 import 'package:siven_app/core/services/selection_storage_service.dart';
 import 'package:siven_app/core/services/LugarCaptacionService.dart';
+import 'package:siven_app/core/services/CondicionPersonaService.dart';
+import 'package:siven_app/core/services/SitioExposicionService.dart';
+import 'package:siven_app/core/services/LugarIngresoPaisService.dart';
 
 // Importaciones de widgets personalizados
 import 'package:siven_app/widgets/version.dart';
@@ -39,6 +42,9 @@ class _CaptacionState extends State<Captacion> {
   late EventoSaludService eventoSaludService;
   late MaternidadService maternidadService;
   late LugarCaptacionService lugarCaptacionService;
+  late CondicionPersonaService condicionPersonaService;
+  late SitioExposicionService sitioExposicionService;
+  late LugarIngresoPaisService lugarIngresoPaisService;
 
   // Instancias de las tarjetas
   late PrimeraTarjeta _primeraTarjeta;
@@ -64,12 +70,15 @@ class _CaptacionState extends State<Captacion> {
     eventoSaludService = EventoSaludService(httpService: httpService);
     maternidadService = MaternidadService(httpService: httpService);
     lugarCaptacionService = LugarCaptacionService(httpService: httpService);
+    condicionPersonaService = CondicionPersonaService(httpService: httpService);
+    sitioExposicionService = SitioExposicionService(httpService: httpService);
+    lugarIngresoPaisService = LugarIngresoPaisService(httpService: httpService);
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final args = ModalRoute.of(context)!.settings.arguments;
+    final args = ModalRoute.of(context)?.settings.arguments;
     if (args != null && args is Map<String, dynamic>) {
       setState(() {
         _selectedEventoName = args['eventoSeleccionado'];
@@ -91,6 +100,9 @@ class _CaptacionState extends State<Captacion> {
         catalogService: catalogService,
         selectionStorageService: selectionStorageService,
         lugarCaptacionService: lugarCaptacionService,
+        condicionPersonaService: condicionPersonaService,
+        sitioExposicionService: sitioExposicionService,
+        lugarIngresoPaisService: lugarIngresoPaisService,
       );
 
       _terceraTarjeta = const TerceraTarjeta();
@@ -103,6 +115,11 @@ class _CaptacionState extends State<Captacion> {
   @override
   void dispose() {
     _pageController.dispose();
+    // Asegúrate de cerrar todos los servicios si es necesario
+    lugarCaptacionService.close();
+    condicionPersonaService.close();
+    sitioExposicionService.close();
+    lugarIngresoPaisService.close();
     super.dispose();
   }
 
@@ -191,7 +208,7 @@ class _CaptacionState extends State<Captacion> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           _buildHeader(),
-          content,
+          KeepAlivePage(child: content), // Envolvemos el contenido aquí
         ],
       ),
     );
@@ -207,8 +224,7 @@ class _CaptacionState extends State<Captacion> {
         leading: Padding(
           padding: const EdgeInsets.only(top: 13.0),
           child: IconButton(
-            icon: const Icon(Icons.arrow_back,
-                color: Color(0xFF1877F2), size: 32),
+            icon: const Icon(Icons.arrow_back, color: Color(0xFF1877F2), size: 32),
             onPressed: () {
               Navigator.pushNamed(context, '/captacion_inf_paciente');
             },
@@ -260,8 +276,7 @@ class _CaptacionState extends State<Captacion> {
                   children: [
                     for (int i = 0; i < 4; i++)
                       Padding(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 4.0),
+                        padding: const EdgeInsets.symmetric(horizontal: 4.0),
                         child: Icon(
                           Icons.circle,
                           size: 12,
@@ -294,5 +309,27 @@ class _CaptacionState extends State<Captacion> {
         ],
       ),
     );
+  }
+}
+
+// Widget auxiliar para mantener el estado
+class KeepAlivePage extends StatefulWidget {
+  final Widget child;
+
+  const KeepAlivePage({Key? key, required this.child}) : super(key: key);
+
+  @override
+  _KeepAlivePageState createState() => _KeepAlivePageState();
+}
+
+class _KeepAlivePageState extends State<KeepAlivePage>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context); // Necesario para el mixin
+    return widget.child;
   }
 }
