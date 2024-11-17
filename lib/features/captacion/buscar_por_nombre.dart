@@ -28,6 +28,9 @@ class _BusquedaPorNombreScreenState extends State<BusquedaPorNombreScreen> {
 
   List<Map<String, dynamic>> resultados = [];
 
+  // Lista para almacenar los IDs de las personas encontradas
+  List<int> personaIds = [];
+
   @override
   void initState() {
     super.initState();
@@ -93,10 +96,19 @@ class _BusquedaPorNombreScreenState extends State<BusquedaPorNombreScreen> {
           resultados = resultado;
         });
 
+        // Extraer y almacenar los IDs (suponiendo que 'id_persona' es el campo de ID)
+        personaIds = resultado.map<int>((persona) => persona['id_persona'] as int).toList();
+
+        // Imprimir los IDs en la terminal
+        print('IDs de las personas encontradas en BusquedaPorNombreScreen: $personaIds');
+
         Navigator.pushNamed(
           context,
           '/captacion_resultado_busqueda',
-          arguments: resultados, // Se envía la lista de resultados
+          arguments: {
+            'resultados': resultados,
+            'personaIds': personaIds,
+          },
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -107,6 +119,7 @@ class _BusquedaPorNombreScreenState extends State<BusquedaPorNombreScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Error al buscar personas.'))
       );
+      print('Error en buscarPorNombreOApellido: $e');
     }
   }
 
@@ -122,7 +135,7 @@ class _BusquedaPorNombreScreenState extends State<BusquedaPorNombreScreen> {
           child: IconButton(
             icon: const Icon(Icons.arrow_back, color: Color(0xFF1877F2), size: 32),
             onPressed: () {
-              Navigator.pushNamed(context, '/captacion_busqeda_persona');
+              Navigator.pushNamed(context, '/');
             },
           ),
         ),
@@ -307,11 +320,4 @@ class _BusquedaPorNombreScreenState extends State<BusquedaPorNombreScreen> {
       ),
     );
   }
-}
-
-void main() {
-  runApp(const MaterialApp(
-    home: BusquedaPorNombreScreen(),
-    debugShowCheckedModeBanner: false,
-  ));
 }

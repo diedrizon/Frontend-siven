@@ -13,15 +13,12 @@ class InfoDtPacienteCaptacion extends StatefulWidget {
   const InfoDtPacienteCaptacion({Key? key}) : super(key: key);
 
   @override
-  _InfoDtPacienteCaptacionState createState() =>
-      _InfoDtPacienteCaptacionState();
+  _InfoDtPacienteCaptacionState createState() => _InfoDtPacienteCaptacionState();
 }
 
 class _InfoDtPacienteCaptacionState extends State<InfoDtPacienteCaptacion> {
-  bool _showDatosPaciente =
-      true; // Estado para controlar la visibilidad de "Datos del paciente"
-  bool _showDatosCaptacion =
-      false; // Estado para controlar la visibilidad de "Datos de captación"
+  bool _showDatosPaciente = true; // Estado para controlar la visibilidad de "Datos del paciente"
+  bool _showDatosCaptacion = false; // Estado para controlar la visibilidad de "Datos de captación"
 
   // Lista de eventos de captación (simulando más datos)
   final List<Map<String, dynamic>> _eventosCaptacion = [
@@ -74,6 +71,9 @@ class _InfoDtPacienteCaptacionState extends State<InfoDtPacienteCaptacion> {
   // Variable para almacenar el nombre del evento seleccionado
   String? _selectedEventoName;
 
+  // Variable para almacenar el id_persona internamente
+  int? internalIdPersona;
+
   @override
   void initState() {
     super.initState();
@@ -87,8 +87,7 @@ class _InfoDtPacienteCaptacionState extends State<InfoDtPacienteCaptacion> {
 
     catalogService = CatalogServiceRedServicio(httpService: httpService);
     selectionStorageService = SelectionStorageService();
-    eventoSaludService =
-        EventoSaludService(httpService: httpService); // Inicializar
+    eventoSaludService = EventoSaludService(httpService: httpService); // Inicializar
   }
 
   @override
@@ -99,10 +98,15 @@ class _InfoDtPacienteCaptacionState extends State<InfoDtPacienteCaptacion> {
     if (args != null && args is Map<String, dynamic>) {
       setState(() {
         persona = args;
+        // Extraer el id_persona directamente desde el objeto persona
+        internalIdPersona = persona['id_persona'] as int?;
       });
+      // Imprimir el id_persona en la terminal
+      print('ID de persona recuperado en InfoDtPacienteCaptacion: $internalIdPersona');
     } else {
       // Manejar el caso donde no se pasaron argumentos
       persona = {};
+      print('No se encontraron datos de persona en los argumentos.');
     }
   }
 
