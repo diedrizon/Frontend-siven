@@ -9,6 +9,9 @@ import 'package:siven_app/core/services/selection_storage_service.dart';
 import 'package:siven_app/widgets/version.dart';
 import 'package:siven_app/widgets/Encabezado_reporte_analisis.dart';
 
+import 'package:siven_app/core/services/LugarCaptacionService.dart';
+
+
 
 import 'PrimeraTarjeta.dart';
 import 'SegundaTarjeta.dart';
@@ -32,6 +35,8 @@ class _CaptacionState extends State<Captacion> {
   late SelectionStorageService selectionStorageService;
   late EventoSaludService eventoSaludService;
   late MaternidadService maternidadService;
+  late LugarCaptacionService lugarCaptacionService;
+
 
   @override
   void initState() {
@@ -47,6 +52,7 @@ class _CaptacionState extends State<Captacion> {
     selectionStorageService = SelectionStorageService();
     eventoSaludService = EventoSaludService(httpService: httpService);
     maternidadService = MaternidadService(httpService: httpService);
+    lugarCaptacionService = LugarCaptacionService(httpService: httpService);
   }
 
   // Métodos de navegación
@@ -81,6 +87,7 @@ class _CaptacionState extends State<Captacion> {
         return SegundaTarjeta(
           catalogService: catalogService,
           selectionStorageService: selectionStorageService,
+           lugarCaptacionService: lugarCaptacionService,
         );
       case 2:
         return TerceraTarjeta();

@@ -1,24 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:siven_app/widgets/TextField.dart';
+import 'package:flutter/services.dart';
+import 'package:siven_app/widgets/TextField.dart'; // Para CustomTextFieldDropdown
 import 'package:siven_app/core/services/catalogo_service_red_servicio.dart';
 import 'package:siven_app/core/services/selection_storage_service.dart';
+import 'package:siven_app/core/services/LugarCaptacionService.dart'; // Nuevo servicio para Lugar de Captación
 
 class SegundaTarjeta extends StatefulWidget {
   final CatalogServiceRedServicio catalogService;
   final SelectionStorageService selectionStorageService;
+  final LugarCaptacionService lugarCaptacionService; 
 
   const SegundaTarjeta({
     Key? key,
     required this.catalogService,
     required this.selectionStorageService,
+    required this.lugarCaptacionService, // Añadido servicio aquí
   }) : super(key: key);
 
   @override
   _SegundaTarjetaState createState() => _SegundaTarjetaState();
 }
 
-
 class _SegundaTarjetaState extends State<SegundaTarjeta> {
+  // Controladores de texto
   final TextEditingController lugarCaptacionController = TextEditingController();
   final TextEditingController condicionPersonaController = TextEditingController();
   final TextEditingController fechaCaptacionController = TextEditingController();
@@ -40,6 +44,12 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
   final TextEditingController lugarIngresoPaisController = TextEditingController();
   final TextEditingController observacionesCaptacionController = TextEditingController();
 
+  // Variables de estado para manejar dinámicamente el lugar de captación
+  List<Map<String, dynamic>> lugaresCaptacion = []; // Lista de lugares con ID y nombre
+  String? selectedLugarCaptacionId; // ID del lugar seleccionado
+  bool isLoadingLugares = true; // Indicador de carga
+  String? errorLugares; // Mensaje de error
+
   bool _presentaSintomas = false;
   bool _fueReferido = false;
   bool _esViajero = false;
@@ -47,17 +57,23 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
   @override
   void initState() {
     super.initState();
+    // Llamar a la carga de lugares de captación
+    fetchLugaresCaptacion();
 
+    // Listeners para actualizaciones dinámicas
     presentaSintomasController.addListener(_actualizarPresentaSintomas);
     fueReferidoController.addListener(_actualizarFueReferido);
     esViajeroController.addListener(_actualizarEsViajero);
   }
 
+  // Función para actualizar el estado según si presenta síntomas
   void _actualizarPresentaSintomas() {
     setState(() {
       _presentaSintomas = presentaSintomasController.text == 'Sí';
     });
   }
+
+  // Función para actualizar el estado según si fue referido
 
   void _actualizarFueReferido() {
     setState(() {
@@ -65,10 +81,33 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
     });
   }
 
+  // Función para actualizar el estado según si es viajero
   void _actualizarEsViajero() {
     setState(() {
       _esViajero = esViajeroController.text == 'Sí';
     });
+  }
+
+  // Función para obtener los lugares de captación desde el servicio
+  Future<void> fetchLugaresCaptacion() async {
+    try {
+      final lugares = await widget.lugarCaptacionService.listarLugaresCaptacion();
+      if (mounted) {
+        setState(() {
+          lugaresCaptacion = lugares
+              .map((e) => {'id': e['id_lugar_captacion'], 'nombre': e['nombre']})
+              .toList();
+          isLoadingLugares = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          errorLugares = 'Error al cargar lugares de captación: $e';
+          isLoadingLugares = false;
+        });
+      }
+    }
   }
 
   @override
@@ -97,14 +136,12 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
     fechaIngresoPaisController.dispose();
     lugarIngresoPaisController.dispose();
     observacionesCaptacionController.dispose();
-
     super.dispose();
   }
 
-  @override
+   @override
   Widget build(BuildContext context) {
     return Card(
-      // Aquí va todo el contenido de la segunda tarjeta, utilizando los controladores locales y manteniendo el mismo diseño
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
         side: const BorderSide(color: Color(0xFF00C1D4), width: 1),
@@ -122,14 +159,14 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
                   width: 24,
                   height: 24,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF00C1D4), // Fondo celeste
+                    color: const Color(0xFF00C1D4),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   alignment: Alignment.center,
                   child: const Text(
                     '2',
                     style: TextStyle(
-                      color: Colors.white, // Texto blanco
+                      color: Colors.white,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -140,7 +177,7 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF00C1D4), // Texto celeste
+                    color: Color(0xFF00C1D4),
                   ),
                 ),
               ],
@@ -153,21 +190,33 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
               children: [
                 const Text(
                   'Lugar de Captación *',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.black,
-                  ),
+                  style: TextStyle(fontSize: 16, color: Colors.black),
                 ),
                 const SizedBox(height: 5),
-                CustomTextFieldDropdown(
-                  hintText: 'Selecciona un lugar de captación',
-                  controller: lugarCaptacionController,
-                  options: ['Hospital', 'Centro de Salud', 'Campaña Móvil', 'Otro'],
-                  borderColor: const Color(0xFF00C1D4),
-                  borderRadius: 8.0,
-                  width: double.infinity,
-                  height: 55.0,
-                ),
+                isLoadingLugares
+                    ? const Center(child: CircularProgressIndicator())
+                    : errorLugares != null
+                        ? Text(
+                            errorLugares!,
+                            style: const TextStyle(color: Colors.red),
+                          )
+                        : CustomTextFieldDropdown(
+                            hintText: 'Selecciona un lugar de captación',
+                            controller: lugarCaptacionController,
+                            options: lugaresCaptacion.map((e) => e['nombre'] as String).toList(),
+                            borderColor: const Color(0xFF00C1D4),
+                            borderRadius: 8.0,
+                            width: double.infinity,
+                            height: 55.0,
+                            onChanged: (selectedNombre) {
+                              setState(() {
+                                selectedLugarCaptacionId = lugaresCaptacion
+                                    .firstWhere((lugar) => lugar['nombre'] == selectedNombre)['id']
+                                    .toString();
+                              });
+                              print('ID seleccionado: $selectedLugarCaptacionId');
+                            },
+                          ),
               ],
             ),
             const SizedBox(height: 20),
