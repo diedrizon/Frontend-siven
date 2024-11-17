@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-// Clase singleton para gestionar los dropdowns abiertos
+// Clase singleton para gestionar los dropdowns abiertos y cerrar el teclado
 class DropdownManager {
   static final DropdownManager _singleton = DropdownManager._internal();
 
@@ -13,9 +13,12 @@ class DropdownManager {
   _CustomTextFieldDropdownState? _currentOpenDropdown;
 
   void registerOpenDropdown(_CustomTextFieldDropdownState dropdown) {
+    // Cierra cualquier dropdown abierto
     if (_currentOpenDropdown != null && _currentOpenDropdown != dropdown) {
       _currentOpenDropdown!._closeDropdown();
     }
+    // Cierra el teclado
+    FocusManager.instance.primaryFocus?.unfocus();
     _currentOpenDropdown = dropdown;
   }
 
@@ -70,6 +73,9 @@ class _CustomTextFieldDropdownState extends State<CustomTextFieldDropdown> {
   }
 
   void _openDropdown() {
+    // Cierra el teclado y otros dropdowns abiertos
+    DropdownManager().registerOpenDropdown(this);
+
     _overlayEntry = _createOverlayEntry();
     Overlay.of(context).insert(_overlayEntry!);
 
@@ -77,10 +83,6 @@ class _CustomTextFieldDropdownState extends State<CustomTextFieldDropdown> {
       _isDropdownOpen = true;
     });
 
-    // Registrar este dropdown como el abierto actualmente
-    DropdownManager().registerOpenDropdown(this);
-
-    // Escuchar cambios de foco
     _focusNode.addListener(_handleFocusChange);
   }
 
@@ -92,10 +94,7 @@ class _CustomTextFieldDropdownState extends State<CustomTextFieldDropdown> {
       _isDropdownOpen = false;
     });
 
-    // Remover el listener de foco
     _focusNode.removeListener(_handleFocusChange);
-
-    // Desregistrar este dropdown
     DropdownManager().unregisterOpenDropdown(this);
   }
 
@@ -121,7 +120,7 @@ class _CustomTextFieldDropdownState extends State<CustomTextFieldDropdown> {
             borderRadius: BorderRadius.circular(widget.borderRadius),
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                maxHeight: 200, // Altura máxima del desplegable
+                maxHeight: 200,
               ),
               child: ListView(
                 padding: EdgeInsets.zero,
@@ -132,8 +131,6 @@ class _CustomTextFieldDropdownState extends State<CustomTextFieldDropdown> {
                     onTap: () {
                       widget.controller.text = option;
                       _closeDropdown();
-
-                      // Ejecutar la función onChanged si está definida
                       if (widget.onChanged != null) {
                         widget.onChanged!(option);
                       }
@@ -172,7 +169,7 @@ class _CustomTextFieldDropdownState extends State<CustomTextFieldDropdown> {
                 children: [
                   Icon(
                     _isDropdownOpen ? Icons.arrow_drop_up : Icons.arrow_drop_down,
-                    color: Color(0xFF4A4A4A),
+                    color: const Color(0xFF4A4A4A),
                   ),
                   IconButton(
                     icon: Icon(Icons.delete, color: widget.borderColor),
@@ -185,20 +182,26 @@ class _CustomTextFieldDropdownState extends State<CustomTextFieldDropdown> {
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(widget.borderRadius),
                 borderSide: BorderSide(
-                    color: widget.borderColor, width: widget.borderWidth),
+                  color: widget.borderColor,
+                  width: widget.borderWidth,
+                ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(widget.borderRadius),
                 borderSide: BorderSide(
-                    color: widget.borderColor, width: widget.borderWidth),
+                  color: widget.borderColor,
+                  width: widget.borderWidth,
+                ),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(widget.borderRadius),
                 borderSide: BorderSide(
-                    color: widget.borderColor, width: widget.borderWidth),
+                  color: widget.borderColor,
+                  width: widget.borderWidth,
+                ),
               ),
             ),
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 16,
               color: Colors.black,
             ),
