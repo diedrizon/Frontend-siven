@@ -45,9 +45,11 @@ class _SeleccionRedServicioTrabajadorWidgetState
       }
     } catch (e) {
       print('Error al cargar SILAIS: $e');
-      setState(() {
-        isLoadingSilais = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoadingSilais = false;
+        });
+      }
     }
   }
 
@@ -66,9 +68,11 @@ class _SeleccionRedServicioTrabajadorWidgetState
       }
     } catch (e) {
       print('Error al cargar Establecimientos: $e');
-      setState(() {
-        isLoadingEstablecimientos = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoadingEstablecimientos = false;
+        });
+      }
     }
   }
 
@@ -104,12 +108,14 @@ class _SeleccionRedServicioTrabajadorWidgetState
                     );
                   }).toList(),
                   onChanged: (val) async {
+                    if (val == null) return;
                     setState(() {
                       selectedSilaisId = val;
                       selectedEstablecimientoId = null;
                       establecimientosList.clear();
                     });
-                    await _loadEstablecimientos(int.parse(val!));
+                    print('SILAIS seleccionado ID: $selectedSilaisId');
+                    await _loadEstablecimientos(int.parse(val));
                   },
                 ),
           const SizedBox(height: 20),
@@ -133,35 +139,46 @@ class _SeleccionRedServicioTrabajadorWidgetState
                     );
                   }).toList(),
                   onChanged: (val) {
+                    if (val == null) return;
                     setState(() {
                       selectedEstablecimientoId = val;
                     });
+                    print('Establecimiento seleccionado ID: $selectedEstablecimientoId');
                   },
                 ),
           const SizedBox(height: 20),
 
           ElevatedButton(
             onPressed: () async {
-              if (selectedSilaisId != null &&
-                  selectedEstablecimientoId != null) {
+              if (selectedSilaisId != null && selectedEstablecimientoId != null) {
                 final selectedData = {
                   'silais': silaisList
-                      .firstWhere((silais) =>
-                          silais['id_silais'].toString() ==
-                          selectedSilaisId)['nombre']
+                      .firstWhere((silais) => silais['id_silais'].toString() == selectedSilaisId)['nombre']
                       .toString(),
                   'establecimiento': establecimientosList
                       .firstWhere((establecimiento) =>
-                          establecimiento['id_establecimiento'].toString() ==
-                          selectedEstablecimientoId)['nombre']
+                          establecimiento['id_establecimiento'].toString() == selectedEstablecimientoId)['nombre']
                       .toString(),
+                  'silaisId': selectedSilaisId!,
+                  'establecimientoId': selectedEstablecimientoId!,
                 };
+
+                // Imprimir los IDs seleccionados antes de cerrar
+                print('Seleccionado SILAIS ID: ${selectedData['silaisId']}');
+                print('Seleccionado Establecimiento ID: ${selectedData['establecimientoId']}');
 
                 // Agregamos un retraso para evitar el error de navegación
                 await Future.delayed(const Duration(milliseconds: 100));
                 if (mounted) {
                   Navigator.of(context).pop(selectedData);
                 }
+              } else {
+                // Mostrar un mensaje si no se han seleccionado ambos campos
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Por favor, selecciona SILAIS y Establecimiento'),
+                  ),
+                );
               }
             },
             style: ElevatedButton.styleFrom(
