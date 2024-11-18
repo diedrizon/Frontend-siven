@@ -1,3 +1,5 @@
+// lib/screens/captacion.dart
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
@@ -46,7 +48,7 @@ class _CaptacionState extends State<Captacion> {
   late CondicionPersonaService condicionPersonaService;
   late SitioExposicionService sitioExposicionService;
   late LugarIngresoPaisService lugarIngresoPaisService;
-  late SintomasService sintomasService; // Añadir esta línea
+  late SintomasService sintomasService; // Inicializar el SintomasService
 
   // Instancias de las tarjetas
   late PrimeraTarjeta _primeraTarjeta;
@@ -91,12 +93,17 @@ class _CaptacionState extends State<Captacion> {
 
     // Inicializar las tarjetas una sola vez después de obtener los argumentos
     if (!_cardsInitialized) {
+      final int? idPersona = args != null && args is Map<String, dynamic> ? args['id_persona'] as int? : null;
+      final int? idEventoSalud = args != null && args is Map<String, dynamic> ? args['id_evento_salud'] as int? : null;
+
       _primeraTarjeta = PrimeraTarjeta(
         nombreEventoSeleccionado: _selectedEventoName,
         nombreCompleto: nombreCompleto,
         catalogService: catalogService,
         selectionStorageService: selectionStorageService,
         maternidadService: maternidadService,
+        idEventoSalud: idEventoSalud?.toString(),
+        idPersona: idPersona,
       );
 
       _segundaTarjeta = SegundaTarjeta(
