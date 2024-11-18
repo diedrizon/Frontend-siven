@@ -4,8 +4,10 @@ import 'package:siven_app/features/red_de_servicio_screen.dart';
 import 'package:siven_app/core/network/auth_repository.dart'; 
 import 'package:siven_app/core/network/api_client.dart'; 
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart'; // Importa url_launcher
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized(); // Asegura que los bindings estén inicializados
   runApp(SivenApp());
 }
 
@@ -94,6 +96,38 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _sendForgotPasswordMessage() async {
+    final username = _usernameController.text.trim();
+    if (username.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Por favor, ingresa tu usuario primero')),
+      );
+      return;
+    }
+
+    final phoneNumber = '50558800062'; // Formato internacional sin símbolos
+    final message = 'El usuario $username olvidó su contraseña.';
+
+    // Construir las URLs
+    final whatsappSchemeUrl = Uri.parse('whatsapp://send?phone=$phoneNumber&text=${Uri.encodeComponent(message)}');
+    final whatsappWebUrl = Uri.parse('https://wa.me/$phoneNumber?text=${Uri.encodeComponent(message)}');
+
+    // Intentar abrir con el esquema de WhatsApp
+    if (await canLaunchUrl(whatsappSchemeUrl)) {
+      await launchUrl(whatsappSchemeUrl, mode: LaunchMode.externalApplication);
+    }
+    // Si falla, intentar abrir en el navegador
+    else if (await canLaunchUrl(whatsappWebUrl)) {
+      await launchUrl(whatsappWebUrl, mode: LaunchMode.externalApplication);
+    }
+    // Si ambas fallan, mostrar un mensaje de error
+    else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo abrir WhatsApp.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -152,7 +186,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Align(
                         alignment: Alignment.centerLeft,
                         child: TextButton(
-                          onPressed: () {}, // Funcionalidad vacía
+                          onPressed: _sendForgotPasswordMessage, // Actualiza aquí
                           child: Text(
                             '¿Olvidaste tu contraseña?',
                             style: TextStyle(color: const Color.fromARGB(255, 255, 27, 27)),
