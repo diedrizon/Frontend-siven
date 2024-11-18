@@ -59,8 +59,6 @@ class CustomTextFieldDropdown extends StatefulWidget {
 }
 
 class _CustomTextFieldDropdownState extends State<CustomTextFieldDropdown> {
-  final LayerLink _layerLink = LayerLink();
-  OverlayEntry? _overlayEntry;
   bool _isDropdownOpen = false;
   final FocusNode _focusNode = FocusNode();
 
@@ -73,76 +71,36 @@ class _CustomTextFieldDropdownState extends State<CustomTextFieldDropdown> {
   }
 
   void _openDropdown() {
-    // Cierra el teclado y otros dropdowns abiertos
+    // Registra este dropdown como el actualmente abierto
     DropdownManager().registerOpenDropdown(this);
-
-    _overlayEntry = _createOverlayEntry();
-    Overlay.of(context).insert(_overlayEntry!);
-
     setState(() {
       _isDropdownOpen = true;
     });
-
-    _focusNode.addListener(_handleFocusChange);
   }
 
   void _closeDropdown() {
-    _overlayEntry?.remove();
-    _overlayEntry = null;
-
     setState(() {
       _isDropdownOpen = false;
     });
-
-    _focusNode.removeListener(_handleFocusChange);
     DropdownManager().unregisterOpenDropdown(this);
   }
 
-  void _handleFocusChange() {
-    if (!_focusNode.hasFocus) {
-      _closeDropdown();
+  void _handleOptionTap(String option) {
+    widget.controller.text = option;
+    _closeDropdown();
+    if (widget.onChanged != null) {
+      widget.onChanged!(option);
     }
   }
 
-  OverlayEntry _createOverlayEntry() {
-    RenderBox renderBox = context.findRenderObject() as RenderBox;
-    var size = renderBox.size;
-
-    return OverlayEntry(
-      builder: (context) => Positioned(
-        width: size.width,
-        child: CompositedTransformFollower(
-          link: _layerLink,
-          showWhenUnlinked: false,
-          offset: Offset(0.0, size.height + 5.0),
-          child: Material(
-            elevation: 4,
-            borderRadius: BorderRadius.circular(widget.borderRadius),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: 200,
-              ),
-              child: ListView(
-                padding: EdgeInsets.zero,
-                shrinkWrap: true,
-                children: widget.options.map((option) {
-                  return ListTile(
-                    title: Text(option),
-                    onTap: () {
-                      widget.controller.text = option;
-                      _closeDropdown();
-                      if (widget.onChanged != null) {
-                        widget.onChanged!(option);
-                      }
-                    },
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(() {
+      if (!_focusNode.hasFocus && _isDropdownOpen) {
+        _closeDropdown();
+      }
+    });
   }
 
   @override
@@ -154,60 +112,85 @@ class _CustomTextFieldDropdownState extends State<CustomTextFieldDropdown> {
 
   @override
   Widget build(BuildContext context) {
-    return CompositedTransformTarget(
-      link: _layerLink,
-      child: GestureDetector(
-        onTap: _toggleDropdown,
-        child: AbsorbPointer(
-          child: TextFormField(
-            controller: widget.controller,
-            focusNode: _focusNode,
-            decoration: InputDecoration(
-              hintText: widget.hintText,
-              suffixIcon: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    _isDropdownOpen ? Icons.arrow_drop_up : Icons.arrow_drop_down,
-                    color: const Color(0xFF4A4A4A),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: _toggleDropdown,
+          child: AbsorbPointer(
+            child: TextFormField(
+              controller: widget.controller,
+              focusNode: _focusNode,
+              decoration: InputDecoration(
+                hintText: widget.hintText,
+                suffixIcon: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _isDropdownOpen
+                          ? Icons.arrow_drop_up
+                          : Icons.arrow_drop_down,
+                      color: const Color(0xFF4A4A4A),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.delete, color: widget.borderColor),
+                      onPressed: () {
+                        widget.controller.clear();
+                        if (widget.onChanged != null) {
+                          widget.onChanged!('');
+                        }
+                      },
+                    ),
+                  ],
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(widget.borderRadius),
+                  borderSide: BorderSide(
+                    color: widget.borderColor,
+                    width: widget.borderWidth,
                   ),
-                  IconButton(
-                    icon: Icon(Icons.delete, color: widget.borderColor),
-                    onPressed: () {
-                      widget.controller.clear();
-                    },
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(widget.borderRadius),
+                  borderSide: BorderSide(
+                    color: widget.borderColor,
+                    width: widget.borderWidth,
                   ),
-                ],
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(widget.borderRadius),
-                borderSide: BorderSide(
-                  color: widget.borderColor,
-                  width: widget.borderWidth,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(widget.borderRadius),
+                  borderSide: BorderSide(
+                    color: widget.borderColor,
+                    width: widget.borderWidth,
+                  ),
                 ),
               ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(widget.borderRadius),
-                borderSide: BorderSide(
-                  color: widget.borderColor,
-                  width: widget.borderWidth,
-                ),
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.black,
               ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(widget.borderRadius),
-                borderSide: BorderSide(
-                  color: widget.borderColor,
-                  width: widget.borderWidth,
-                ),
-              ),
-            ),
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.black,
             ),
           ),
         ),
-      ),
+        if (_isDropdownOpen)
+          Container(
+            width: widget.width,
+            decoration: BoxDecoration(
+              border: Border.all(color: widget.borderColor),
+              borderRadius: BorderRadius.circular(widget.borderRadius),
+              color: Colors.white,
+            ),
+            child: ListView(
+              shrinkWrap: true,
+              children: widget.options.map((option) {
+                return ListTile(
+                  title: Text(option),
+                  onTap: () => _handleOptionTap(option),
+                );
+              }).toList(),
+            ),
+          ),
+      ],
     );
   }
 }

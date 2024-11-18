@@ -1,4 +1,3 @@
-// lib/widgets/segunda_tarjeta.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart';
@@ -8,10 +7,40 @@ import 'package:siven_app/core/services/SitioExposicionService.dart';
 import 'package:siven_app/core/services/LugarIngresoPaisService.dart';
 import 'package:siven_app/core/services/catalogo_service_red_servicio.dart';
 import 'package:siven_app/core/services/selection_storage_service.dart';
-import 'package:siven_app/core/services/SintomasService.dart'; // Importar SintomasService
-import 'package:siven_app/widgets/MapSelectionScreen.dart'; // Importar MapSelectionScreen
+import 'package:siven_app/core/services/SintomasService.dart';
+import 'package:siven_app/widgets/MapSelectionScreen.dart';
 import 'package:siven_app/widgets/seleccion_red_servicio_trabajador_widget.dart';
 import 'package:siven_app/widgets/search_persona_widget.dart';
+import 'package:siven_app/widgets/TextField.dart'; // Importar CustomTextFieldDropdown
+
+/// Formateador para limitar la entrada numérica a un rango específico.
+class RangeTextInputFormatter extends TextInputFormatter {
+  final int min;
+  final int max;
+
+  RangeTextInputFormatter({required this.min, required this.max});
+
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    if (newValue.text.isEmpty) return newValue;
+
+    final int? value = int.tryParse(newValue.text);
+    if (value == null || value < min || value > max) {
+      return oldValue;
+    }
+
+    return newValue;
+  }
+}
+
+/// Clase para representar opciones de Dropdown con ID y Nombre.
+class DropdownOption {
+  final String id;
+  final String name;
+
+  DropdownOption({required this.id, required this.name});
+}
 
 class SegundaTarjeta extends StatefulWidget {
   final CatalogServiceRedServicio catalogService;
@@ -20,7 +49,7 @@ class SegundaTarjeta extends StatefulWidget {
   final CondicionPersonaService condicionPersonaService;
   final SitioExposicionService sitioExposicionService;
   final LugarIngresoPaisService lugarIngresoPaisService;
-  final SintomasService sintomasService; // Añadir SintomasService
+  final SintomasService sintomasService;
 
   const SegundaTarjeta({
     Key? key,
@@ -30,7 +59,7 @@ class SegundaTarjeta extends StatefulWidget {
     required this.condicionPersonaService,
     required this.sitioExposicionService,
     required this.lugarIngresoPaisService,
-    required this.sintomasService, // Añadir al constructor
+    required this.sintomasService,
   }) : super(key: key);
 
   @override
@@ -39,52 +68,74 @@ class SegundaTarjeta extends StatefulWidget {
 
 class _SegundaTarjetaState extends State<SegundaTarjeta> {
   // Controladores de texto
-  final TextEditingController lugarCaptacionController = TextEditingController();
-  final TextEditingController condicionPersonaController = TextEditingController();
-  final TextEditingController fechaCaptacionController = TextEditingController();
-  final TextEditingController semanaEpidemiologicaController = TextEditingController();
-  final TextEditingController silaisCaptacionController = TextEditingController();
-  final TextEditingController establecimientoCaptacionController = TextEditingController();
-  final TextEditingController sitioExposicionController = TextEditingController();
-  final TextEditingController latitudOcurrenciaController = TextEditingController();
-  final TextEditingController longitudOcurrenciaController = TextEditingController();
-  final TextEditingController presentaSintomasController = TextEditingController();
-  final TextEditingController fechaInicioSintomasController = TextEditingController();
+  final TextEditingController lugarCaptacionController =
+      TextEditingController();
+  final TextEditingController condicionPersonaController =
+      TextEditingController();
+  final TextEditingController fechaCaptacionController =
+      TextEditingController();
+  final TextEditingController semanaEpidemiologicaController =
+      TextEditingController();
+  final TextEditingController silaisCaptacionController =
+      TextEditingController();
+  final TextEditingController establecimientoCaptacionController =
+      TextEditingController();
+  final TextEditingController sitioExposicionController =
+      TextEditingController();
+  final TextEditingController latitudOcurrenciaController =
+      TextEditingController();
+  final TextEditingController longitudOcurrenciaController =
+      TextEditingController();
+  final TextEditingController presentaSintomasController =
+      TextEditingController();
+  final TextEditingController fechaInicioSintomasController =
+      TextEditingController();
   final TextEditingController sintomasController = TextEditingController();
   final TextEditingController fueReferidoController = TextEditingController();
-  final TextEditingController silaisTrasladoController = TextEditingController();
-  final TextEditingController establecimientoTrasladoController = TextEditingController();
+  final TextEditingController silaisTrasladoController =
+      TextEditingController();
+  final TextEditingController establecimientoTrasladoController =
+      TextEditingController();
   final TextEditingController esViajeroController = TextEditingController();
-  final TextEditingController fechaIngresoPaisController = TextEditingController();
-  final TextEditingController lugarIngresoPaisController = TextEditingController();
-  final TextEditingController observacionesCaptacionController = TextEditingController();
+  final TextEditingController fechaIngresoPaisController =
+      TextEditingController();
+  final TextEditingController lugarIngresoPaisController =
+      TextEditingController();
+  final TextEditingController observacionesCaptacionController =
+      TextEditingController();
 
   // Variables de estado para manejar dinámicamente las selecciones
-  List<Map<String, dynamic>> lugaresCaptacion = [];
+  List<DropdownOption> lugaresCaptacion = [];
   String? selectedLugarCaptacionId;
   bool isLoadingLugares = true;
   String? errorLugares;
 
-  List<Map<String, dynamic>> condicionesPersona = [];
+  List<DropdownOption> condicionesPersona = [];
   String? selectedCondicionPersonaId;
   bool isLoadingCondiciones = true;
   String? errorCondiciones;
 
-  List<Map<String, dynamic>> sitiosExposicion = [];
+  List<DropdownOption> sitiosExposicion = [];
   String? selectedSitioExposicionId;
   bool isLoadingSitios = true;
   String? errorSitios;
 
-  List<Map<String, dynamic>> lugaresIngresoPais = [];
+  List<DropdownOption> lugaresIngresoPais = [];
   String? selectedLugarIngresoPaisId;
   bool isLoadingIngresoPais = true;
   String? errorIngresoPais;
 
   // Variables para Síntomas
-  List<Map<String, dynamic>> sintomas = [];
-  int? selectedSintomaId;
+  List<DropdownOption> sintomas = [];
+  String? selectedSintomaId;
   bool isLoadingSintomas = true;
   String? errorSintomas;
+
+  // Opciones para campos de preguntas binarias
+  final List<DropdownOption> yesNoOptions = [
+    DropdownOption(id: 'si', name: 'Sí'),
+    DropdownOption(id: 'no', name: 'No'),
+  ];
 
   bool _presentaSintomas = false;
   bool _fueReferido = false;
@@ -98,7 +149,6 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
   String? selectedEstablecimientoTrasladoId;
 
   // Variable para almacenar el ID de la persona que captó
-  // Ignoramos la advertencia temporalmente si es necesario
   // ignore: unused_field
   int? _personaCaptadaId;
 
@@ -110,7 +160,7 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
     fetchCondicionesPersona();
     fetchSitiosExposicion();
     fetchLugarIngresoPais();
-    fetchSintomas(); // Obtener síntomas
+    fetchSintomas();
 
     // Listeners para actualizaciones dinámicas
     presentaSintomasController.addListener(_actualizarPresentaSintomas);
@@ -170,108 +220,173 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
   // Funciones para obtener datos de los servicios
   Future<void> fetchLugaresCaptacion() async {
     try {
-      final lugares = await widget.lugarCaptacionService.listarLugaresCaptacion();
-      if (mounted) {
-        setState(() {
-          lugaresCaptacion = lugares
-              .map((e) => {'id': e['id_lugar_captacion'], 'nombre': e['nombre']})
-              .toList();
-          isLoadingLugares = false;
-        });
-      }
+      List<Map<String, dynamic>> lugares =
+          await widget.lugarCaptacionService.listarLugaresCaptacion();
+      List<DropdownOption> opciones = lugares.map((e) {
+        return DropdownOption(
+          id: e['id_lugar_captacion'].toString(),
+          name: e['nombre'] as String,
+        );
+      }).toList();
+
+      if (!mounted) return;
+
+      setState(() {
+        lugaresCaptacion = opciones;
+        isLoadingLugares = false;
+      });
+
+      print('Opciones de Lugares de Captación cargadas:');
+      lugaresCaptacion.forEach((opcion) {
+        print('ID: ${opcion.id}, Nombre: ${opcion.name}');
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          errorLugares = 'Error al cargar lugares de captación: $e';
-          isLoadingLugares = false;
-        });
-      }
+      if (!mounted) return;
+
+      setState(() {
+        errorLugares = 'Error al cargar lugares de captación: $e';
+        isLoadingLugares = false;
+      });
+
+      print('Error al cargar Lugares de Captación: $errorLugares');
     }
   }
 
   Future<void> fetchCondicionesPersona() async {
     try {
-      final condiciones = await widget.condicionPersonaService.listarCondicionesPersona();
-      if (mounted) {
-        setState(() {
-          condicionesPersona = condiciones
-              .map((e) => {'id': e['id_condicion_persona'], 'nombre': e['nombre']})
-              .toList();
-          isLoadingCondiciones = false;
-        });
-      }
+      List<Map<String, dynamic>> condiciones =
+          await widget.condicionPersonaService.listarCondicionesPersona();
+      List<DropdownOption> opciones = condiciones.map((e) {
+        return DropdownOption(
+          id: e['id_condicion_persona'].toString(),
+          name: e['nombre'] as String,
+        );
+      }).toList();
+
+      if (!mounted) return;
+
+      setState(() {
+        condicionesPersona = opciones;
+        isLoadingCondiciones = false;
+      });
+
+      print('Opciones de Condiciones de Persona cargadas:');
+      condicionesPersona.forEach((opcion) {
+        print('ID: ${opcion.id}, Nombre: ${opcion.name}');
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          errorCondiciones = 'Error al cargar condiciones de persona: $e';
-          isLoadingCondiciones = false;
-        });
-      }
+      if (!mounted) return;
+
+      setState(() {
+        errorCondiciones = 'Error al cargar condiciones de persona: $e';
+        isLoadingCondiciones = false;
+      });
+
+      print('Error al cargar Condiciones de Persona: $errorCondiciones');
     }
   }
 
   Future<void> fetchSitiosExposicion() async {
     try {
-      final sitios = await widget.sitioExposicionService.listarSitiosExposicion();
-      if (mounted) {
-        setState(() {
-          sitiosExposicion = sitios
-              .map((e) => {'id': e['id_sitio_exposicion'], 'nombre': e['nombre']})
-              .toList();
-          isLoadingSitios = false;
-        });
-      }
+      List<Map<String, dynamic>> sitios =
+          await widget.sitioExposicionService.listarSitiosExposicion();
+      List<DropdownOption> opciones = sitios.map((e) {
+        return DropdownOption(
+          id: e['id_sitio_exposicion'].toString(),
+          name: e['nombre'] as String,
+        );
+      }).toList();
+
+      if (!mounted) return;
+
+      setState(() {
+        sitiosExposicion = opciones;
+        isLoadingSitios = false;
+      });
+
+      print('Opciones de Sitios de Exposición cargadas:');
+      sitiosExposicion.forEach((opcion) {
+        print('ID: ${opcion.id}, Nombre: ${opcion.name}');
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          errorSitios = 'Error al cargar sitios de exposición: $e';
-          isLoadingSitios = false;
-        });
-      }
+      if (!mounted) return;
+
+      setState(() {
+        errorSitios = 'Error al cargar sitios de exposición: $e';
+        isLoadingSitios = false;
+      });
+
+      print('Error al cargar Sitios de Exposición: $errorSitios');
     }
   }
 
   Future<void> fetchLugarIngresoPais() async {
     try {
-      final lugares = await widget.lugarIngresoPaisService.listarLugarIngresoPais();
-      if (mounted) {
-        setState(() {
-          lugaresIngresoPais = lugares
-              .map((e) => {'id': e['id_lugar_ingreso_pais'], 'nombre': e['nombre']})
-              .toList();
-          isLoadingIngresoPais = false;
-        });
-      }
+      List<Map<String, dynamic>> lugares =
+          await widget.lugarIngresoPaisService.listarLugarIngresoPais();
+      List<DropdownOption> opciones = lugares.map((e) {
+        return DropdownOption(
+          id: e['id_lugar_ingreso_pais'].toString(),
+          name: e['nombre'] as String,
+        );
+      }).toList();
+
+      if (!mounted) return;
+
+      setState(() {
+        lugaresIngresoPais = opciones;
+        isLoadingIngresoPais = false;
+      });
+
+      print('Opciones de Lugares de Ingreso al País cargadas:');
+      lugaresIngresoPais.forEach((opcion) {
+        print('ID: ${opcion.id}, Nombre: ${opcion.name}');
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          errorIngresoPais = 'Error al cargar lugares de ingreso por país: $e';
-          isLoadingIngresoPais = false;
-        });
-      }
+      if (!mounted) return;
+
+      setState(() {
+        errorIngresoPais = 'Error al cargar lugares de ingreso por país: $e';
+        isLoadingIngresoPais = false;
+      });
+
+      print('Error al cargar Lugares de Ingreso al País: $errorIngresoPais');
     }
   }
 
   // Función para obtener los síntomas desde el servicio
   Future<void> fetchSintomas() async {
     try {
-      final fetchedSintomas = await widget.sintomasService.listarSintomas();
-      if (mounted) {
-        setState(() {
-          sintomas = fetchedSintomas
-              .where((sintoma) => sintoma['activo'] == 1)
-              .map((e) => {'id': e['id_sintomas'], 'nombre': e['nombre']})
-              .toList();
-          isLoadingSintomas = false;
-        });
-      }
+      List<Map<String, dynamic>> fetchedSintomas =
+          await widget.sintomasService.listarSintomas();
+      List<DropdownOption> opciones =
+          fetchedSintomas.where((sintoma) => sintoma['activo'] == 1).map((e) {
+        return DropdownOption(
+          id: e['id_sintomas'].toString(),
+          name: e['nombre'] as String,
+        );
+      }).toList();
+
+      if (!mounted) return;
+
+      setState(() {
+        sintomas = opciones;
+        isLoadingSintomas = false;
+      });
+
+      print('Opciones de Síntomas cargadas:');
+      sintomas.forEach((opcion) {
+        print('ID: ${opcion.id}, Nombre: ${opcion.name}');
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          errorSintomas = 'Error al cargar síntomas: $e';
-          isLoadingSintomas = false;
-        });
-      }
+      if (!mounted) return;
+
+      setState(() {
+        errorSintomas = 'Error al cargar síntomas: $e';
+        isLoadingSintomas = false;
+      });
+
+      print('Error al cargar Síntomas: $errorSintomas');
     }
   }
 
@@ -295,15 +410,18 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
     if (result != null) {
       if (!mounted) return;
       setState(() {
-        silaisCaptacionController.text = result['silais'] ?? 'SILAIS no seleccionado';
-        establecimientoCaptacionController.text = result['establecimiento'] ?? 'Establecimiento no seleccionado';
+        silaisCaptacionController.text =
+            result['silais'] ?? 'SILAIS no seleccionado';
+        establecimientoCaptacionController.text =
+            result['establecimiento'] ?? 'Establecimiento no seleccionado';
         selectedSILAISCaptacionId = result['silaisId'];
         selectedEstablecimientoCaptacionId = result['establecimientoId'];
       });
 
       // Imprimir los IDs seleccionados
       print('ID seleccionado SILAIS Captación: $selectedSILAISCaptacionId');
-      print('ID seleccionado Establecimiento Captación: $selectedEstablecimientoCaptacionId');
+      print(
+          'ID seleccionado Establecimiento Captación: $selectedEstablecimientoCaptacionId');
     }
   }
 
@@ -327,51 +445,50 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
     if (result != null) {
       if (!mounted) return;
       setState(() {
-        silaisTrasladoController.text = result['silais'] ?? 'SILAIS no seleccionado';
-        establecimientoTrasladoController.text = result['establecimiento'] ?? 'Establecimiento no seleccionado';
+        silaisTrasladoController.text =
+            result['silais'] ?? 'SILAIS no seleccionado';
+        establecimientoTrasladoController.text =
+            result['establecimiento'] ?? 'Establecimiento no seleccionado';
         selectedSILAISTrasladoId = result['silaisId'];
         selectedEstablecimientoTrasladoId = result['establecimientoId'];
       });
 
       // Imprimir los IDs seleccionados
       print('ID seleccionado SILAIS Traslado: $selectedSILAISTrasladoId');
-      print('ID seleccionado Establecimiento Traslado: $selectedEstablecimientoTrasladoId');
+      print(
+          'ID seleccionado Establecimiento Traslado: $selectedEstablecimientoTrasladoId');
     }
   }
 
   // Función para abrir la pantalla de selección de ubicación
   Future<void> _abrirSeleccionUbicacion({required bool isLatitude}) async {
+    final selectedLocation = await Navigator.of(context).push<LatLng>(
+      MaterialPageRoute(
+        builder: (context) => MapSelectionScreen(
+          onLocationSelected: (LatLng location) {
+            Navigator.of(context).pop(location);
+          },
+        ),
+      ),
+    );
 
-   
-    await Navigator.of(context).push(
-  MaterialPageRoute(
-    builder: (context) => MapSelectionScreen(
-      onLocationSelected: (LatLng location) {
-        setState(() {
-          latitudOcurrenciaController.text = location.latitude.toStringAsFixed(6);
-          longitudOcurrenciaController.text = location.longitude.toStringAsFixed(6);
-        });
-        print(
-            'Ubicación seleccionada: Latitud=${location.latitude}, Longitud=${location.longitude}');
-      },
-    ),
-  ),
-);
-
-
-    // Hacer los campos de solo lectura después de la selección
-    if (isLatitude) {
+    if (selectedLocation != null) {
       setState(() {
-        latitudOcurrenciaController.text = latitudOcurrenciaController.text;
+        if (isLatitude) {
+          latitudOcurrenciaController.text =
+              selectedLocation.latitude.toStringAsFixed(6);
+        } else {
+          longitudOcurrenciaController.text =
+              selectedLocation.longitude.toStringAsFixed(6);
+        }
       });
-    } else {
-      setState(() {
-        longitudOcurrenciaController.text = longitudOcurrenciaController.text;
-      });
+
+      print(
+          'Ubicación seleccionada: Latitud=${selectedLocation.latitude}, Longitud=${selectedLocation.longitude}');
     }
   }
 
-  // Método auxiliar para construir campos de texto con ícono de mapa
+  /// Método auxiliar para construir campos de texto con ícono de mapa
   Widget buildTextFieldWithMapIcon({
     required String label,
     required TextEditingController controller,
@@ -395,11 +512,13 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
         const SizedBox(height: 5),
         TextFormField(
           controller: controller,
-          readOnly: true, // Hacer de solo lectura para evitar modificaciones manuales
+          readOnly:
+              true, // Hacer de solo lectura para evitar modificaciones manuales
           decoration: InputDecoration(
             hintText: hintText,
-            prefixIcon:
-                prefixIcon != null ? Icon(prefixIcon, color: const Color(0xFF00C1D4)) : null,
+            prefixIcon: prefixIcon != null
+                ? Icon(prefixIcon, color: const Color(0xFF00C1D4))
+                : null,
             suffixIcon: IconButton(
               icon: const Icon(Icons.map, color: Color(0xFF00C1D4)),
               onPressed: () => _abrirSeleccionUbicacion(isLatitude: isLatitude),
@@ -427,7 +546,7 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
     );
   }
 
-  // Método auxiliar para construir campos de texto
+  /// Método auxiliar para construir campos de texto
   Widget buildTextField({
     required String label,
     required TextEditingController controller,
@@ -439,6 +558,7 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
     VoidCallback? onTap,
     bool enabled = true,
     int maxLines = 1,
+    Widget? suffixIcon,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -453,8 +573,10 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
           readOnly: readOnly,
           decoration: InputDecoration(
             hintText: hintText,
-            prefixIcon:
-                prefixIcon != null ? Icon(prefixIcon, color: const Color(0xFF00C1D4)) : null,
+            prefixIcon: prefixIcon != null
+                ? Icon(prefixIcon, color: const Color(0xFF00C1D4))
+                : null,
+            suffixIcon: suffixIcon,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: Color(0xFF00C1D4)),
@@ -478,7 +600,55 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
     );
   }
 
-  // Método auxiliar para construir campos desplegables
+  /// Método auxiliar para construir campos desplegables usando CustomTextFieldDropdown
+  Widget _buildCustomDropdownField({
+    required String label,
+    required List<DropdownOption> options,
+    required String? selectedId,
+    required TextEditingController controller,
+    required Function(String?) onChanged,
+    required IconData icon,
+    String hintText = 'Selecciona una opción',
+  }) {
+    // Extraer solo los nombres para el dropdown
+    List<String> opciones = options.map((option) => option.name).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 16,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 5),
+        CustomTextFieldDropdown(
+          hintText: hintText,
+          controller: controller,
+          options: opciones,
+          borderColor: const Color(0xFF00C1D4),
+          borderWidth: 1.0,
+          borderRadius: 8.0,
+          onChanged: (selectedOption) {
+            // Encontrar el ID correspondiente al nombre seleccionado
+            final selectedOptionObj = options.firstWhere(
+              (option) => option.name == selectedOption,
+              orElse: () => DropdownOption(id: '', name: ''),
+            );
+
+            onChanged(
+                selectedOptionObj.id.isNotEmpty ? selectedOptionObj.id : null);
+
+            print('Opción seleccionada para $label: ${selectedOptionObj.id}');
+          },
+        ),
+      ],
+    );
+  }
+
+  /// Método auxiliar para construir campos desplegables usando DropdownButtonFormField (si se necesita)
   Widget buildDropdownField({
     required String label,
     required String? value,
@@ -508,8 +678,9 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
                     value: value,
                     decoration: InputDecoration(
                       hintText: hintText,
-                      prefixIcon:
-                          prefixIcon != null ? Icon(prefixIcon, color: const Color(0xFF00C1D4)) : null,
+                      prefixIcon: prefixIcon != null
+                          ? Icon(prefixIcon, color: const Color(0xFF00C1D4))
+                          : null,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8.0),
                         borderSide: const BorderSide(color: Color(0xFF00C1D4)),
@@ -530,7 +701,7 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
     );
   }
 
-  // Método auxiliar para construir campos de selección de fecha
+  /// Método auxiliar para construir campos de selección de fecha
   Widget buildDatePickerField({
     required String label,
     required TextEditingController controller,
@@ -554,14 +725,15 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
           setState(() {
             controller.text = "${pickedDate.toLocal()}".split(' ')[0];
             // Calcular y establecer la semana epidemiológica
-            semanaEpidemiologicaController.text = calcularSemanaEpidemiologica(pickedDate).toString();
+            semanaEpidemiologicaController.text =
+                calcularSemanaEpidemiologica(pickedDate).toString();
           });
         }
       },
     );
   }
 
-  // Función para calcular la semana epidemiológica
+  /// Función para calcular la semana epidemiológica
   int calcularSemanaEpidemiologica(DateTime fecha) {
     // Ajustar la fecha al jueves de la semana
     DateTime jueves = fecha.add(Duration(days: 4 - fecha.weekday));
@@ -591,6 +763,7 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: Colors.white, // Establecer color de fondo blanco
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
         side: const BorderSide(color: Color(0xFF00C1D4), width: 1),
@@ -598,91 +771,56 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
       elevation: 4,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView( // Asegura que el contenido sea scrollable
+        child: SingleChildScrollView(
+          // Asegura que el contenido sea scrollable
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Título de la Tarjeta
-              Row(
-                children: [
-                  Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF00C1D4), // Fondo celeste
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Text(
-                      '2',
-                      style: TextStyle(
-                        color: Colors.white, // Texto blanco
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Datos de Captación',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF00C1D4), // Texto celeste
-                    ),
-                  ),
-                ],
-              ),
+              _buildCardTitle(),
               const SizedBox(height: 20),
 
               // Campo: Lugar de Captación
-              buildDropdownField(
+              _buildCustomDropdownField(
                 label: 'Lugar de Captación *',
-                value: selectedLugarCaptacionId,
-                items: lugaresCaptacion.map((e) {
-                  return DropdownMenuItem<String>(
-                    value: e['id'].toString(),
-                    child: Text(e['nombre']),
-                  );
-                }).toList(),
+                options: lugaresCaptacion,
+                selectedId: selectedLugarCaptacionId,
+                controller: lugarCaptacionController,
+                icon: Icons.location_on,
+                hintText: 'Selecciona un lugar de captación',
                 onChanged: (selectedId) {
                   setState(() {
                     selectedLugarCaptacionId = selectedId;
                     lugarCaptacionController.text = lugaresCaptacion
-                        .firstWhere((lugar) => lugar['id'].toString() == selectedId)['nombre']
-                        .toString();
+                        .firstWhere((lugar) => lugar.id == selectedId,
+                            orElse: () => DropdownOption(id: '', name: ''))
+                        .name;
                   });
-                  print('ID seleccionado Lugar de Captación: $selectedLugarCaptacionId');
+                  print(
+                      'ID seleccionado Lugar de Captación: $selectedLugarCaptacionId');
                 },
-                hintText: 'Selecciona un lugar de captación',
-                prefixIcon: Icons.location_on,
-                isLoading: isLoadingLugares,
-                errorText: errorLugares,
               ),
               const SizedBox(height: 20),
 
               // Campo: Condición de la Persona
-              buildDropdownField(
+              _buildCustomDropdownField(
                 label: 'Condición de la Persona *',
-                value: selectedCondicionPersonaId,
-                items: condicionesPersona.map((e) {
-                  return DropdownMenuItem<String>(
-                    value: e['id'].toString(),
-                    child: Text(e['nombre']),
-                  );
-                }).toList(),
+                options: condicionesPersona,
+                selectedId: selectedCondicionPersonaId,
+                controller: condicionPersonaController,
+                icon: Icons.health_and_safety,
+                hintText: 'Selecciona una condición',
                 onChanged: (selectedId) {
                   setState(() {
                     selectedCondicionPersonaId = selectedId;
                     condicionPersonaController.text = condicionesPersona
-                        .firstWhere((condicion) => condicion['id'].toString() == selectedId)['nombre']
-                        .toString();
+                        .firstWhere((condicion) => condicion.id == selectedId,
+                            orElse: () => DropdownOption(id: '', name: ''))
+                        .name;
                   });
-                  print('ID seleccionado Condición Persona: $selectedCondicionPersonaId');
+                  print(
+                      'ID seleccionado Condición Persona: $selectedCondicionPersonaId');
                 },
-                hintText: 'Selecciona una condición',
-                prefixIcon: Icons.health_and_safety,
-                isLoading: isLoadingCondiciones,
-                errorText: errorCondiciones,
               ),
               const SizedBox(height: 20),
 
@@ -706,73 +844,25 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
               const SizedBox(height: 20),
 
               // Campo: SILAIS de Captación con Icono de Búsqueda
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'SILAIS de Captación *',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  SizedBox(
-                    height: 55.0,
-                    child: Stack(
-                      children: [
-                        TextField(
-                          controller: silaisCaptacionController,
-                          readOnly: true,
-                          decoration: InputDecoration(
-                            hintText: 'Selecciona un SILAIS',
-                            contentPadding: const EdgeInsets.symmetric(vertical: 15.0, horizontal: 10.0),
-                            prefixIcon: const Icon(Icons.map, color: Color(0xFF00C1D4)),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8.0),
-                              borderSide: const BorderSide(
-                                color: Color(0xFF00C1D4),
-                                width: 2.0,
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8.0),
-                              borderSide: const BorderSide(
-                                color: Color(0xFF00C1D4),
-                                width: 2.0,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8.0),
-                              borderSide: const BorderSide(
-                                color: Color(0xFF00C1D4),
-                                width: 2.0,
-                              ),
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          right: 8,
-                          top: 8,
-                          child: IconButton(
-                            icon: const Icon(Icons.search, color: Color(0xFF00C1D4)),
-                            onPressed: _abrirDialogoSeleccionRedServicioCaptacion,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              buildSearchableTextField(
+                label: 'SILAIS de Captación *',
+                controller: silaisCaptacionController,
+                hintText: 'Selecciona un SILAIS',
+                prefixIcon: Icons.map,
+                onSearch: _abrirDialogoSeleccionRedServicioCaptacion,
               ),
               const SizedBox(height: 20),
 
               // Campo: Establecimiento de Captación
-              buildTextField(
+              buildSearchableTextField(
                 label: 'Establecimiento de Captación *',
                 controller: establecimientoCaptacionController,
                 hintText: 'Selecciona un establecimiento',
                 prefixIcon: Icons.local_hospital,
-                readOnly: true,
+                onSearch: () {
+                  // Implementa aquí la lógica para buscar establecimientos si es necesario
+                  // Por ejemplo, abrir otro diálogo o navegar a una pantalla de búsqueda
+                },
               ),
               const SizedBox(height: 20),
 
@@ -782,134 +872,89 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
                   setState(() {
                     _personaCaptadaId = idPersona;
                   });
+                  print('Persona seleccionada ID: $_personaCaptadaId');
                 },
               ),
               const SizedBox(height: 20),
 
               // Campo: ¿Fue Referido?
-              buildDropdownField(
+              _buildCustomDropdownField(
                 label: '¿Fue Referido? *',
-                value: fueReferidoController.text.isNotEmpty ? fueReferidoController.text : null,
-                items: ['Sí', 'No'].map((String option) {
-                  return DropdownMenuItem<String>(
-                    value: option,
-                    child: Text(option),
-                  );
-                }).toList(),
-                onChanged: (selected) {
+                options: yesNoOptions,
+                selectedId: fueReferidoController.text.isNotEmpty
+                    ? (fueReferidoController.text == 'Sí' ? 'si' : 'no')
+                    : null,
+                controller: fueReferidoController,
+                icon: Icons.assignment_return,
+                hintText: 'Selecciona una opción',
+                onChanged: (selectedId) {
                   setState(() {
-                    fueReferidoController.text = selected ?? '';
-                    _fueReferido = selected == 'Sí';
-                    if (!_fueReferido) {
+                    if (selectedId == 'si') {
+                      fueReferidoController.text = 'Sí';
+                      _fueReferido = true;
+                    } else if (selectedId == 'no') {
+                      fueReferidoController.text = 'No';
+                      _fueReferido = false;
                       silaisTrasladoController.clear();
                       establecimientoTrasladoController.clear();
-                      // También limpiar los campos relacionados con Traslado si es necesario
+                      selectedSILAISTrasladoId = null;
+                      selectedEstablecimientoTrasladoId = null;
+                    } else {
+                      fueReferidoController.text = '';
+                      _fueReferido = false;
                     }
                   });
-                  print('¿Fue Referido? seleccionado: ${fueReferidoController.text}');
+                  print(
+                      '¿Fue Referido? seleccionado: ${fueReferidoController.text}');
                 },
-                hintText: 'Selecciona una opción',
-                prefixIcon: Icons.assignment_return,
               ),
               const SizedBox(height: 20),
 
               // Campos de Traslado (Condicional)
               if (_fueReferido) ...[
                 // Campo: SILAIS de Traslado con Icono de Búsqueda
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'SILAIS de Traslado *',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.black,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    SizedBox(
-                      height: 55.0,
-                      child: Stack(
-                        children: [
-                          TextField(
-                            controller: silaisTrasladoController,
-                            readOnly: true,
-                            decoration: InputDecoration(
-                              hintText: 'Selecciona un SILAIS',
-                              contentPadding: const EdgeInsets.symmetric(vertical: 15.0, horizontal: 10.0),
-                              prefixIcon: const Icon(Icons.map, color: Color(0xFF00C1D4)),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8.0),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFF00C1D4),
-                                  width: 2.0,
-                                ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8.0),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFF00C1D4),
-                                  width: 2.0,
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8.0),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFF00C1D4),
-                                  width: 2.0,
-                                ),
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            right: 8,
-                            top: 8,
-                            child: IconButton(
-                              icon: const Icon(Icons.search, color: Color(0xFF00C1D4)),
-                              onPressed: _abrirDialogoSeleccionRedServicioTraslado,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                buildSearchableTextField(
+                  label: 'SILAIS de Traslado *',
+                  controller: silaisTrasladoController,
+                  hintText: 'Selecciona un SILAIS',
+                  prefixIcon: Icons.map,
+                  onSearch: _abrirDialogoSeleccionRedServicioTraslado,
                 ),
                 const SizedBox(height: 20),
 
                 // Campo: Establecimiento de Traslado
-                buildTextField(
+                buildSearchableTextField(
                   label: 'Establecimiento de Traslado *',
                   controller: establecimientoTrasladoController,
                   hintText: 'Selecciona un establecimiento',
                   prefixIcon: Icons.local_hospital,
-                  readOnly: true,
+                  onSearch: () {
+                    // Implementa aquí la lógica para buscar establecimientos si es necesario
+                    // Por ejemplo, abrir otro diálogo o navegar a una pantalla de búsqueda
+                  },
                 ),
                 const SizedBox(height: 20),
               ],
 
               // Campo: Sitio de Exposición
-              buildDropdownField(
+              _buildCustomDropdownField(
                 label: 'Sitio de Exposición *',
-                value: selectedSitioExposicionId,
-                items: sitiosExposicion.map((e) {
-                  return DropdownMenuItem<String>(
-                    value: e['id'].toString(),
-                    child: Text(e['nombre']),
-                  );
-                }).toList(),
+                options: sitiosExposicion,
+                selectedId: selectedSitioExposicionId,
+                controller: sitioExposicionController,
+                icon: Icons.location_on,
+                hintText: 'Selecciona un sitio de exposición',
                 onChanged: (selectedId) {
                   setState(() {
                     selectedSitioExposicionId = selectedId;
                     sitioExposicionController.text = sitiosExposicion
-                        .firstWhere((sitio) => sitio['id'].toString() == selectedId)['nombre']
-                        .toString();
+                        .firstWhere((sitio) => sitio.id == selectedId,
+                            orElse: () => DropdownOption(id: '', name: ''))
+                        .name;
                   });
-                  print('ID seleccionado Sitio de Exposición: $selectedSitioExposicionId');
+                  print(
+                      'ID seleccionado Sitio de Exposición: $selectedSitioExposicionId');
                 },
-                hintText: 'Selecciona un sitio de exposición',
-                prefixIcon: Icons.location_on,
-                isLoading: isLoadingSitios,
-                errorText: errorSitios,
               ),
               const SizedBox(height: 20),
 
@@ -920,7 +965,8 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
                 isLatitude: true,
                 hintText: 'Ingresa la latitud',
                 prefixIcon: Icons.map,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                 ],
@@ -934,7 +980,8 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
                 isLatitude: false,
                 hintText: 'Ingresa la longitud',
                 prefixIcon: Icons.map,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                 ],
@@ -942,29 +989,34 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
               const SizedBox(height: 20),
 
               // Campo: ¿Presenta Síntomas?
-              buildDropdownField(
+              _buildCustomDropdownField(
                 label: '¿Presenta Síntomas? *',
-                value: presentaSintomasController.text.isNotEmpty ? presentaSintomasController.text : null,
-                items: ['Sí', 'No'].map((String option) {
-                  return DropdownMenuItem<String>(
-                    value: option,
-                    child: Text(option),
-                  );
-                }).toList(),
-                onChanged: (selected) {
+                options: yesNoOptions,
+                selectedId: presentaSintomasController.text.isNotEmpty
+                    ? (presentaSintomasController.text == 'Sí' ? 'si' : 'no')
+                    : null,
+                controller: presentaSintomasController,
+                icon: Icons.medical_services,
+                hintText: 'Selecciona una opción',
+                onChanged: (selectedId) {
                   setState(() {
-                    presentaSintomasController.text = selected ?? '';
-                    _presentaSintomas = selected == 'Sí';
-                    if (!_presentaSintomas) {
+                    if (selectedId == 'si') {
+                      presentaSintomasController.text = 'Sí';
+                      _presentaSintomas = true;
+                    } else if (selectedId == 'no') {
+                      presentaSintomasController.text = 'No';
+                      _presentaSintomas = false;
                       fechaInicioSintomasController.clear();
                       sintomasController.clear();
-                      selectedSintomaId = null; // Limpiar selección de síntoma
+                      selectedSintomaId = null;
+                    } else {
+                      presentaSintomasController.text = '';
+                      _presentaSintomas = false;
                     }
                   });
-                  print('¿Presenta Síntomas? seleccionado: ${presentaSintomasController.text}');
+                  print(
+                      '¿Presenta Síntomas? seleccionado: ${presentaSintomasController.text}');
                 },
-                hintText: 'Selecciona una opción',
-                prefixIcon: Icons.medical_services,
               ),
               const SizedBox(height: 20),
 
@@ -980,55 +1032,56 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
                 const SizedBox(height: 20),
 
                 // Campo: Síntomas
-                buildDropdownField(
+                _buildCustomDropdownField(
                   label: 'Síntomas *',
-                  value: selectedSintomaId != null ? selectedSintomaId.toString() : null,
-                  items: sintomas.map((e) {
-                    return DropdownMenuItem<String>(
-                      value: e['id'].toString(),
-                      child: Text(e['nombre']),
-                    );
-                  }).toList(),
-                  onChanged: (selectedIdStr) {
+                  options: sintomas,
+                  selectedId: selectedSintomaId,
+                  controller: sintomasController,
+                  icon: Icons.emoji_people,
+                  hintText: 'Selecciona los síntomas',
+                  onChanged: (selectedId) {
                     setState(() {
-                      selectedSintomaId = selectedIdStr != null ? int.parse(selectedIdStr) : null;
-                      sintomasController.text = selectedSintomaId != null
-                          ? sintomas.firstWhere((s) => s['id'] == selectedSintomaId)['nombre']
-                          : '';
+                      selectedSintomaId = selectedId;
+                      sintomasController.text = sintomas
+                          .firstWhere((sintoma) => sintoma.id == selectedId,
+                              orElse: () => DropdownOption(id: '', name: ''))
+                          .name;
                     });
                     print('Síntoma seleccionado ID: $selectedSintomaId');
                   },
-                  hintText: 'Selecciona los síntomas',
-                  prefixIcon: Icons.emoji_people,
-                  isLoading: isLoadingSintomas,
-                  errorText: errorSintomas,
                 ),
                 const SizedBox(height: 20),
               ],
 
               // Campo: ¿Es Viajero?
-              buildDropdownField(
+              _buildCustomDropdownField(
                 label: '¿Es Viajero? *',
-                value: esViajeroController.text.isNotEmpty ? esViajeroController.text : null,
-                items: ['Sí', 'No'].map((String option) {
-                  return DropdownMenuItem<String>(
-                    value: option,
-                    child: Text(option),
-                  );
-                }).toList(),
-                onChanged: (selected) {
+                options: yesNoOptions,
+                selectedId: esViajeroController.text.isNotEmpty
+                    ? (esViajeroController.text == 'Sí' ? 'si' : 'no')
+                    : null,
+                controller: esViajeroController,
+                icon: Icons.airplanemode_active,
+                hintText: 'Selecciona una opción',
+                onChanged: (selectedId) {
                   setState(() {
-                    esViajeroController.text = selected ?? '';
-                    _esViajero = selected == 'Sí';
-                    if (!_esViajero) {
+                    if (selectedId == 'si') {
+                      esViajeroController.text = 'Sí';
+                      _esViajero = true;
+                    } else if (selectedId == 'no') {
+                      esViajeroController.text = 'No';
+                      _esViajero = false;
                       fechaIngresoPaisController.clear();
                       lugarIngresoPaisController.clear();
+                      selectedLugarIngresoPaisId = null;
+                    } else {
+                      esViajeroController.text = '';
+                      _esViajero = false;
                     }
                   });
-                  print('¿Es Viajero? seleccionado: ${esViajeroController.text}');
+                  print(
+                      '¿Es Viajero? seleccionado: ${esViajeroController.text}');
                 },
-                hintText: 'Selecciona una opción',
-                prefixIcon: Icons.airplanemode_active,
               ),
               const SizedBox(height: 20),
 
@@ -1044,28 +1097,24 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
                 const SizedBox(height: 20),
 
                 // Campo: Lugar de Ingreso al País
-                buildDropdownField(
+                _buildCustomDropdownField(
                   label: 'Lugar de Ingreso al País *',
-                  value: selectedLugarIngresoPaisId,
-                  items: lugaresIngresoPais.map((e) {
-                    return DropdownMenuItem<String>(
-                      value: e['id'].toString(),
-                      child: Text(e['nombre']),
-                    );
-                  }).toList(),
+                  options: lugaresIngresoPais,
+                  selectedId: selectedLugarIngresoPaisId,
+                  controller: lugarIngresoPaisController,
+                  icon: Icons.flag,
+                  hintText: 'Selecciona un lugar de ingreso al país',
                   onChanged: (selectedId) {
                     setState(() {
                       selectedLugarIngresoPaisId = selectedId;
                       lugarIngresoPaisController.text = lugaresIngresoPais
-                          .firstWhere((lugar) => lugar['id'].toString() == selectedId)['nombre']
-                          .toString();
+                          .firstWhere((lugar) => lugar.id == selectedId,
+                              orElse: () => DropdownOption(id: '', name: ''))
+                          .name;
                     });
-                    print('ID seleccionado Lugar de Ingreso al País: $selectedLugarIngresoPaisId');
+                    print(
+                        'ID seleccionado Lugar de Ingreso al País: $selectedLugarIngresoPaisId');
                   },
-                  hintText: 'Selecciona un lugar de ingreso al país',
-                  prefixIcon: Icons.flag,
-                  isLoading: isLoadingIngresoPais,
-                  errorText: errorIngresoPais,
                 ),
                 const SizedBox(height: 20),
               ],
@@ -1083,6 +1132,86 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
           ),
         ),
       ),
+    );
+  }
+
+  /// Construye el título de la tarjeta.
+  Widget _buildCardTitle() {
+    return Row(
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: const Color(0xFF00C1D4),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          alignment: Alignment.center,
+          child: const Text(
+            '2',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        const Text(
+          'Datos de Captación',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF00C1D4),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Método auxiliar para construir campos de texto con ícono de búsqueda.
+  Widget buildSearchableTextField({
+    required String label,
+    required TextEditingController controller,
+    required String hintText,
+    required IconData prefixIcon,
+    required VoidCallback onSearch,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 16, color: Colors.black),
+        ),
+        const SizedBox(height: 5),
+        TextFormField(
+          controller: controller,
+          readOnly: true, // Evita modificaciones manuales
+          decoration: InputDecoration(
+            hintText: hintText,
+            prefixIcon: Icon(prefixIcon, color: const Color(0xFF00C1D4)),
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.search, color: Color(0xFF00C1D4)),
+              onPressed: onSearch,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
+            ),
+          ),
+          onTap: () {
+            // Opcional: Puedes implementar alguna acción al tocar el campo
+          },
+        ),
+      ],
     );
   }
 }

@@ -1,12 +1,10 @@
-// lib/widgets/primera_tarjeta.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
 import 'package:siven_app/core/services/catalogo_service_red_servicio.dart';
 import 'package:siven_app/core/services/selection_storage_service.dart';
 import 'package:siven_app/core/services/Maternidadservice.dart';
 import 'package:siven_app/widgets/seleccion_red_servicio_trabajador_widget.dart';
+import 'package:siven_app/widgets/TextField.dart';
 
 /// Formateador para limitar la entrada numérica a un rango específico.
 class RangeTextInputFormatter extends TextInputFormatter {
@@ -123,9 +121,9 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
         'PrimeraTarjeta - ID de persona: ${widget.idPersona}, ID de evento de salud: ${widget.idEventoSalud}');
     fetchOpcionesMaternidad();
 
-    tieneComorbilidadesController.addListener(_actualizarTieneComorbilidades);
-    esTrabajadorSaludController
-        .addListener(_actualizarEsTrabajadorSalud);
+    tieneComorbilidadesController
+        .addListener(_actualizarTieneComorbilidades);
+    esTrabajadorSaludController.addListener(_actualizarEsTrabajadorSalud);
   }
 
   @override
@@ -133,8 +131,7 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
     // Dispose de los controladores
     maternidadController.dispose();
     semanasGestacionController.dispose();
-    esTrabajadorSaludController
-        .removeListener(_actualizarEsTrabajadorSalud);
+    esTrabajadorSaludController.removeListener(_actualizarEsTrabajadorSalud);
     esTrabajadorSaludController.dispose();
     silaisTrabajadorController.dispose();
     establecimientoTrabajadorController.dispose();
@@ -250,6 +247,55 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
     }
   }
 
+  /// Método de ayuda para construir campos desplegables con etiquetas usando CustomTextFieldDropdown.
+  Widget _buildCustomDropdownField({
+    required String label,
+    required List<DropdownOption> options,
+    required String? selectedId,
+    required TextEditingController controller,
+    required Function(String?) onChanged,
+    required IconData icon,
+    String hintText = 'Selecciona una opción',
+  }) {
+    // Extraer solo los nombres para el dropdown
+    List<String> opciones = options.map((option) => option.name).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 16,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 5),
+        CustomTextFieldDropdown(
+          hintText: hintText,
+          controller: controller,
+          options: opciones,
+          borderColor: const Color(0xFF00C1D4),
+          borderWidth: 1.0,
+          borderRadius: 8.0,
+          onChanged: (selectedOption) {
+            // Encontrar el ID correspondiente al nombre seleccionado
+            final selectedOptionObj = options.firstWhere(
+              (option) => option.name == selectedOption,
+              orElse: () => DropdownOption(id: '', name: ''),
+            );
+
+            onChanged(selectedOptionObj.id.isNotEmpty
+                ? selectedOptionObj.id
+                : null);
+
+            print('Opción seleccionada para $label: ${selectedOptionObj.id}');
+          },
+        ),
+      ],
+    );
+  }
+
   /// Construye un campo de texto con etiqueta.
   Widget _buildTextField({
     required String label,
@@ -294,57 +340,10 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
     );
   }
 
-  /// Construye un DropdownButtonFormField con etiqueta y opciones dinámicas.
-  Widget _buildDropdownField({
-    required String label,
-    required String? value,
-    required List<DropdownOption> options,
-    required String hintText,
-    required IconData icon,
-    required void Function(String?) onChanged,
-    String? Function(String?)? validator,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 16, color: Colors.black),
-        ),
-        const SizedBox(height: 5),
-        DropdownButtonFormField<String>(
-          value: value,
-          decoration: InputDecoration(
-            hintText: hintText,
-            prefixIcon: Icon(icon, color: const Color(0xFF00C1D4)),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
-            ),
-          ),
-          items: options.map((option) {
-            return DropdownMenuItem<String>(
-              value: option.id,
-              child: Text(option.name),
-            );
-          }).toList(),
-          onChanged: onChanged,
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: Colors.white, // Establecer color de fondo blanco
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
         side: const BorderSide(color: Color(0xFF00C1D4), width: 1),
@@ -362,11 +361,61 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
               const SizedBox(height: 20),
               _buildPersonaField(),
               const SizedBox(height: 20),
-              _buildMaternidadField(),
+              _buildCustomDropdownField(
+                label: 'Maternidad *',
+                options: opcionesMaternidad,
+                selectedId: selectedMaternidadId,
+                controller: maternidadController,
+                icon: Icons.home,
+                hintText: 'Selecciona una maternidad',
+                onChanged: (selectedId) {
+                  final selectedOption = opcionesMaternidad.firstWhere(
+                    (option) => option.id == selectedId,
+                    orElse: () => DropdownOption(id: '', name: ''),
+                  );
+                  setState(() {
+                    selectedMaternidadId =
+                        selectedOption.id.isNotEmpty ? selectedOption.id : null;
+                    maternidadController.text =
+                        selectedOption.name.isNotEmpty
+                            ? selectedOption.name
+                            : '';
+                  });
+
+                  print('ID seleccionado Maternidad: $selectedMaternidadId');
+                },
+              ),
               const SizedBox(height: 20),
               _buildSemanasGestacionField(),
               const SizedBox(height: 20),
-              _buildEsTrabajadorSaludField(),
+              _buildCustomDropdownField(
+                label: '¿Es Trabajador de la Salud? *',
+                options: opcionesTrabajadorSalud,
+                selectedId: selectedEsTrabajadorSaludId,
+                controller: esTrabajadorSaludController,
+                icon: Icons.health_and_safety,
+                hintText: 'Selecciona una opción',
+                onChanged: (selectedId) {
+                  final selectedOption = opcionesTrabajadorSalud.firstWhere(
+                    (option) => option.id == selectedId,
+                    orElse: () => DropdownOption(id: '0', name: 'No'),
+                  );
+                  setState(() {
+                    selectedEsTrabajadorSaludId = selectedOption.id;
+                    esTrabajadorSaludController.text = selectedOption.name;
+                    _esTrabajadorSalud = selectedOption.id == '1';
+                    if (!_esTrabajadorSalud) {
+                      silaisTrabajadorController.clear();
+                      establecimientoTrabajadorController.clear();
+                      selectedSILAISId = null;
+                      selectedEstablecimientoId = null;
+                    }
+                  });
+
+                  print(
+                      'ID seleccionado ¿Es Trabajador de la Salud?: $selectedEsTrabajadorSaludId');
+                },
+              ),
               const SizedBox(height: 20),
               if (_esTrabajadorSalud) ...[
                 _buildSILAISField(),
@@ -374,10 +423,62 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
                 _buildEstablecimientoField(),
                 const SizedBox(height: 20),
               ],
-              _buildTieneComorbilidadesField(),
+              _buildCustomDropdownField(
+                label: '¿Tiene Comorbilidades? *',
+                options: opcionesTieneComorbilidades,
+                selectedId: selectedTieneComorbilidadesId,
+                controller: tieneComorbilidadesController,
+                icon: Icons.health_and_safety_outlined,
+                hintText: 'Selecciona una opción',
+                onChanged: (selectedId) {
+                  final selectedOption = opcionesTieneComorbilidades.firstWhere(
+                    (option) => option.id == selectedId,
+                    orElse: () => DropdownOption(id: '0', name: 'No'),
+                  );
+                  setState(() {
+                    tieneComorbilidadesController.text = selectedOption.name;
+                    _tieneComorbilidades = selectedOption.id == '1';
+                    selectedTieneComorbilidadesId = selectedOption.id;
+                    if (!_tieneComorbilidades) {
+                      comorbilidadesController.clear();
+                      selectedComorbilidadId = null;
+                    }
+                  });
+
+                  print(
+                      'ID seleccionado ¿Tiene Comorbilidades?: $selectedTieneComorbilidadesId');
+                },
+              ),
               const SizedBox(height: 20),
               if (_tieneComorbilidades) ...[
-                _buildComorbilidadesField(),
+                _buildCustomDropdownField(
+                  label: 'Comorbilidades *',
+                  options: opcionesComorbilidad,
+                  selectedId: selectedComorbilidadId,
+                  controller: comorbilidadesController,
+                  icon: Icons.medical_services,
+                  hintText: 'Selecciona una comorbilidad',
+                  onChanged: (selectedId) {
+                    if (selectedId == null) return;
+                    final opcionComorbilidad = opcionesComorbilidad.firstWhere(
+                      (option) => option.id == selectedId,
+                      orElse: () => DropdownOption(id: '', name: ''),
+                    );
+                    setState(() {
+                      selectedComorbilidadId =
+                          opcionComorbilidad.id.isNotEmpty
+                              ? opcionComorbilidad.id
+                              : null;
+                      comorbilidadesController.text =
+                          opcionComorbilidad.name.isNotEmpty
+                              ? opcionComorbilidad.name
+                              : '';
+                    });
+
+                    print(
+                        'ID seleccionado Comorbilidad: $selectedComorbilidadId');
+                  },
+                ),
                 const SizedBox(height: 20),
               ],
               _buildNombreJefeFamiliaField(),
@@ -439,8 +540,8 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
           readOnly: true,
           decoration: InputDecoration(
             hintText: 'Evento no seleccionado',
-            prefixIcon: const Icon(Icons.local_hospital,
-                color: Color(0xFF00C1D4)),
+            prefixIcon:
+                const Icon(Icons.local_hospital, color: Color(0xFF00C1D4)),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: Color(0xFF00C1D4)),
@@ -474,8 +575,7 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
           readOnly: true,
           decoration: InputDecoration(
             hintText: 'Sin nombre',
-            prefixIcon:
-                const Icon(Icons.person, color: Color(0xFF00C1D4)),
+            prefixIcon: const Icon(Icons.person, color: Color(0xFF00C1D4)),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: Color(0xFF00C1D4)),
@@ -490,75 +590,6 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
             ),
           ),
         ),
-      ],
-    );
-  }
-
-  /// Campo: Maternidad
-  Widget _buildMaternidadField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Maternidad *',
-          style: TextStyle(fontSize: 16, color: Colors.black),
-        ),
-        const SizedBox(height: 5),
-        isLoadingMaternidad
-            ? const Center(child: CircularProgressIndicator())
-            : errorMaternidad != null
-                ? Text(
-                    'Error: $errorMaternidad',
-                    style: const TextStyle(color: Colors.red),
-                  )
-                : DropdownButtonFormField<String>(
-                    value: selectedMaternidadId,
-                    decoration: InputDecoration(
-                      hintText: 'Selecciona una maternidad',
-                      prefixIcon:
-                          const Icon(Icons.home, color: Color(0xFF00C1D4)),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                        borderSide:
-                            const BorderSide(color: Color(0xFF00C1D4)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                        borderSide:
-                            const BorderSide(color: Color(0xFF00C1D4)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                        borderSide:
-                            const BorderSide(color: Color(0xFF00C1D4)),
-                      ),
-                    ),
-                    items: opcionesMaternidad.map((option) {
-                      return DropdownMenuItem<String>(
-                        value: option.id,
-                        child: Text(option.name),
-                      );
-                    }).toList(),
-                    onChanged: (selectedId) {
-                      final selectedOption = opcionesMaternidad.firstWhere(
-                        (option) => option.id == selectedId,
-                        orElse: () => DropdownOption(id: '', name: ''),
-                      );
-                      setState(() {
-                        selectedMaternidadId =
-                            selectedOption.id.isNotEmpty
-                                ? selectedOption.id
-                                : null;
-                        maternidadController.text =
-                            selectedOption.name.isNotEmpty
-                                ? selectedOption.name
-                                : '';
-                      });
-
-                      print(
-                          'ID seleccionado Maternidad: $selectedMaternidadId');
-                    },
-                  ),
       ],
     );
   }
@@ -578,63 +609,24 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
     );
   }
 
-  /// Campo: ¿Es Trabajador de la Salud?
-  Widget _buildEsTrabajadorSaludField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          '¿Es Trabajador de la Salud? *',
-          style: TextStyle(fontSize: 16, color: Colors.black),
-        ),
-        const SizedBox(height: 5),
-        DropdownButtonFormField<String>(
-          value: selectedEsTrabajadorSaludId,
-          decoration: InputDecoration(
-            hintText: 'Selecciona una opción',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: const BorderSide(
-                  color: Color(0xFF00C1D4), width: 2.0),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: const BorderSide(
-                  color: Color(0xFF00C1D4), width: 2.0),
-            ),
-          ),
-          items: opcionesTrabajadorSalud.map((option) {
-            return DropdownMenuItem<String>(
-              value: option.id,
-              child: Text(option.name),
-            );
-          }).toList(),
-          onChanged: (selectedId) {
-            final selectedOption = opcionesTrabajadorSalud.firstWhere(
-              (option) => option.id == selectedId,
-              orElse: () => DropdownOption(id: '0', name: 'No'),
-            );
-            setState(() {
-              selectedEsTrabajadorSaludId = selectedOption.id;
-              esTrabajadorSaludController.text = selectedOption.name;
-              _esTrabajadorSalud = selectedOption.id == '1';
-              if (!_esTrabajadorSalud) {
-                silaisTrabajadorController.clear();
-                establecimientoTrabajadorController.clear();
-                selectedSILAISId = null;
-                selectedEstablecimientoId = null;
-              }
-            });
+  /// Campo: Nombre del Jefe de Familia
+  Widget _buildNombreJefeFamiliaField() {
+    return _buildTextField(
+      label: 'Nombre del Jefe de Familia *',
+      controller: nombreJefeFamiliaController,
+      hintText: 'Ingresa el nombre completo',
+      icon: Icons.person,
+    );
+  }
 
-            print(
-                'ID seleccionado ¿Es Trabajador de la Salud?: $selectedEsTrabajadorSaludId');
-          },
-        ),
-      ],
+  /// Campo: Teléfono de Referencia
+  Widget _buildTelefonoReferenciaField() {
+    return _buildTextField(
+      label: 'Teléfono de Referencia *',
+      controller: telefonoReferenciaController,
+      hintText: 'Ingresa el teléfono de referencia',
+      icon: Icons.phone,
+      keyboardType: TextInputType.phone,
     );
   }
 
@@ -741,142 +733,6 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
           ),
         ),
       ],
-    );
-  }
-
-  /// Campo: ¿Tiene Comorbilidades?
-  Widget _buildTieneComorbilidadesField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          '¿Tiene Comorbilidades? *',
-          style: TextStyle(fontSize: 16, color: Colors.black),
-        ),
-        const SizedBox(height: 5),
-        DropdownButtonFormField<String>(
-          value: selectedTieneComorbilidadesId,
-          decoration: InputDecoration(
-            hintText: 'Selecciona una opción',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: const BorderSide(
-                  color: Color(0xFF00C1D4), width: 2.0),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: const BorderSide(
-                  color: Color(0xFF00C1D4), width: 2.0),
-            ),
-          ),
-          items: opcionesTieneComorbilidades.map((option) {
-            return DropdownMenuItem<String>(
-              value: option.id,
-              child: Text(option.name),
-            );
-          }).toList(),
-          onChanged: (selectedId) {
-            final selectedOption = opcionesTieneComorbilidades.firstWhere(
-              (option) => option.id == selectedId,
-              orElse: () => DropdownOption(id: '0', name: 'No'),
-            );
-            setState(() {
-              tieneComorbilidadesController.text = selectedOption.name;
-              _tieneComorbilidades = selectedOption.id == '1';
-              selectedTieneComorbilidadesId = selectedOption.id;
-              if (!_tieneComorbilidades) {
-                comorbilidadesController.clear();
-                selectedComorbilidadId = null;
-              }
-            });
-
-            print(
-                'ID seleccionado ¿Tiene Comorbilidades?: $selectedTieneComorbilidadesId');
-          },
-        ),
-      ],
-    );
-  }
-
-  /// Campo: Comorbilidades (Condicional)
-  Widget _buildComorbilidadesField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Comorbilidades *',
-          style: TextStyle(fontSize: 16, color: Colors.black),
-        ),
-        const SizedBox(height: 5),
-        DropdownButtonFormField<String>(
-          value: selectedComorbilidadId,
-          decoration: InputDecoration(
-            hintText: 'Selecciona una comorbilidad',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
-            ),
-          ),
-          items: opcionesComorbilidad.map((option) {
-            return DropdownMenuItem<String>(
-              value: option.id,
-              child: Text(option.name),
-            );
-          }).toList(),
-          onChanged: (selectedId) {
-            if (selectedId == null) return;
-            final opcionComorbilidad = opcionesComorbilidad.firstWhere(
-              (option) => option.id == selectedId,
-              orElse: () => DropdownOption(id: '', name: ''),
-            );
-            setState(() {
-              selectedComorbilidadId =
-                  opcionComorbilidad.id.isNotEmpty
-                      ? opcionComorbilidad.id
-                      : null;
-              comorbilidadesController.text =
-                  opcionComorbilidad.name.isNotEmpty
-                      ? opcionComorbilidad.name
-                      : '';
-            });
-
-            print('ID seleccionado Comorbilidad: $selectedComorbilidadId');
-          },
-        ),
-      ],
-    );
-  }
-
-  /// Campo: Nombre del Jefe de Familia
-  Widget _buildNombreJefeFamiliaField() {
-    return _buildTextField(
-      label: 'Nombre del Jefe de Familia *',
-      controller: nombreJefeFamiliaController,
-      hintText: 'Ingresa el nombre completo',
-      icon: Icons.person,
-    );
-  }
-
-  /// Campo: Teléfono de Referencia
-  Widget _buildTelefonoReferenciaField() {
-    return _buildTextField(
-      label: 'Teléfono de Referencia *',
-      controller: telefonoReferenciaController,
-      hintText: 'Ingresa el teléfono de referencia',
-      icon: Icons.phone,
-      keyboardType: TextInputType.phone,
     );
   }
 }

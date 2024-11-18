@@ -13,7 +13,8 @@ import 'package:siven_app/core/services/LugarCaptacionService.dart';
 import 'package:siven_app/core/services/CondicionPersonaService.dart';
 import 'package:siven_app/core/services/SitioExposicionService.dart';
 import 'package:siven_app/core/services/LugarIngresoPaisService.dart';
-import 'package:siven_app/core/services/SintomasService.dart'; // Importar el SintomasService
+import 'package:siven_app/core/services/SintomasService.dart';
+import 'package:siven_app/core/services/PuestoNotificacionService.dart'; // Importar el PuestoNotificacionService
 
 // Importaciones de widgets personalizados
 import 'package:siven_app/widgets/version.dart';
@@ -49,6 +50,7 @@ class _CaptacionState extends State<Captacion> {
   late SitioExposicionService sitioExposicionService;
   late LugarIngresoPaisService lugarIngresoPaisService;
   late SintomasService sintomasService; // Inicializar el SintomasService
+  late PuestoNotificacionService puestoNotificacionService; // Declarar el PuestoNotificacionService
 
   // Instancias de las tarjetas
   late PrimeraTarjeta _primeraTarjeta;
@@ -78,6 +80,7 @@ class _CaptacionState extends State<Captacion> {
     sitioExposicionService = SitioExposicionService(httpService: httpService);
     lugarIngresoPaisService = LugarIngresoPaisService(httpService: httpService);
     sintomasService = SintomasService(httpService: httpService); // Inicializar el SintomasService
+    puestoNotificacionService = PuestoNotificacionService(httpService: httpService); // Inicializar el PuestoNotificacionService
   }
 
   @override
@@ -116,7 +119,9 @@ class _CaptacionState extends State<Captacion> {
         sintomasService: sintomasService, 
       );
 
-      _terceraTarjeta = const TerceraTarjeta();
+      _terceraTarjeta = TerceraTarjeta(
+        puestoNotificacionService: puestoNotificacionService, // Pasar el servicio
+      );
       _cuartaTarjeta = const CuartaTarjeta();
 
       _cardsInitialized = true;
@@ -132,6 +137,7 @@ class _CaptacionState extends State<Captacion> {
     sitioExposicionService.close();
     lugarIngresoPaisService.close();
     sintomasService.close(); // Cerrar el SintomasService
+    puestoNotificacionService.close(); // Cerrar el PuestoNotificacionService
     super.dispose();
   }
 
