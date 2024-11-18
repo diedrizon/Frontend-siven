@@ -171,9 +171,14 @@ class _BotonCentroSaludState extends State<BotonCentroSalud> {
         backgroundColor: Colors.white,
         child: const Icon(Icons.apartment, color: Color(0xFF4A4A4A), size: 14),
       ),
-      label: Text(
-        displayUnidadSaludName,
-        style: const TextStyle(color: Colors.white, fontSize: 15),
+      label: Container(
+        width: 200, 
+        child: Text(
+          displayUnidadSaludName,
+          style: const TextStyle(color: Colors.white, fontSize: 15),
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+        ),
       ),
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color.fromARGB(255, 163, 162, 162),
