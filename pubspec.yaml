@@ -30,6 +30,8 @@ dependencies:
   pdf: ^3.8.1
   path_provider: ^2.0.11
   open_filex: ^3.2.1
+  location: ^5.0.0
+  
 
 
 dev_dependencies:
