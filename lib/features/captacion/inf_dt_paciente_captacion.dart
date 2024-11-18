@@ -199,6 +199,7 @@ class _InfoDtPacienteCaptacionState
           'id_persona': _idPersona,
           'id_evento_salud': _idEventoSalud,
           'nombreCompleto': nombreCompleto,
+          'eventoSeleccionado': result['nombre'], // Línea añadida
         },
       );
     }

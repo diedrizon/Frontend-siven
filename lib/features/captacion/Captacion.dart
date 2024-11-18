@@ -14,7 +14,9 @@ import 'package:siven_app/core/services/CondicionPersonaService.dart';
 import 'package:siven_app/core/services/SitioExposicionService.dart';
 import 'package:siven_app/core/services/LugarIngresoPaisService.dart';
 import 'package:siven_app/core/services/SintomasService.dart';
-import 'package:siven_app/core/services/PuestoNotificacionService.dart'; // Importar el PuestoNotificacionService
+import 'package:siven_app/core/services/PuestoNotificacionService.dart';
+import 'package:siven_app/core/services/DiagnosticoService.dart';
+import 'package:siven_app/core/services/ResultadoDiagnosticoService.dart';
 
 // Importaciones de widgets personalizados
 import 'package:siven_app/widgets/version.dart';
@@ -49,8 +51,10 @@ class _CaptacionState extends State<Captacion> {
   late CondicionPersonaService condicionPersonaService;
   late SitioExposicionService sitioExposicionService;
   late LugarIngresoPaisService lugarIngresoPaisService;
-  late SintomasService sintomasService; // Inicializar el SintomasService
-  late PuestoNotificacionService puestoNotificacionService; // Declarar el PuestoNotificacionService
+  late SintomasService sintomasService;
+  late PuestoNotificacionService puestoNotificacionService;
+  late DiagnosticoService diagnosticoService;
+  late ResultadoDiagnosticoService resultadoDiagnosticoService;
 
   // Instancias de las tarjetas
   late PrimeraTarjeta _primeraTarjeta;
@@ -79,8 +83,10 @@ class _CaptacionState extends State<Captacion> {
     condicionPersonaService = CondicionPersonaService(httpService: httpService);
     sitioExposicionService = SitioExposicionService(httpService: httpService);
     lugarIngresoPaisService = LugarIngresoPaisService(httpService: httpService);
-    sintomasService = SintomasService(httpService: httpService); // Inicializar el SintomasService
-    puestoNotificacionService = PuestoNotificacionService(httpService: httpService); // Inicializar el PuestoNotificacionService
+    sintomasService = SintomasService(httpService: httpService);
+    puestoNotificacionService = PuestoNotificacionService(httpService: httpService);
+    diagnosticoService = DiagnosticoService(httpService: httpService);
+    resultadoDiagnosticoService = ResultadoDiagnosticoService(httpService: httpService);
   }
 
   @override
@@ -116,13 +122,19 @@ class _CaptacionState extends State<Captacion> {
         condicionPersonaService: condicionPersonaService,
         sitioExposicionService: sitioExposicionService,
         lugarIngresoPaisService: lugarIngresoPaisService,
-        sintomasService: sintomasService, 
+        sintomasService: sintomasService,
       );
 
       _terceraTarjeta = TerceraTarjeta(
-        puestoNotificacionService: puestoNotificacionService, // Pasar el servicio
+        puestoNotificacionService: puestoNotificacionService,
       );
-      _cuartaTarjeta = const CuartaTarjeta();
+
+      _cuartaTarjeta = CuartaTarjeta(
+        diagnosticoService: diagnosticoService,
+        resultadoDiagnosticoService: resultadoDiagnosticoService,
+        catalogService: catalogService,
+        selectionStorageService: selectionStorageService,
+      );
 
       _cardsInitialized = true;
     }
@@ -136,8 +148,10 @@ class _CaptacionState extends State<Captacion> {
     condicionPersonaService.close();
     sitioExposicionService.close();
     lugarIngresoPaisService.close();
-    sintomasService.close(); // Cerrar el SintomasService
-    puestoNotificacionService.close(); // Cerrar el PuestoNotificacionService
+    sintomasService.close();
+    puestoNotificacionService.close();
+    diagnosticoService.close();
+    resultadoDiagnosticoService.close();
     super.dispose();
   }
 
@@ -226,7 +240,7 @@ class _CaptacionState extends State<Captacion> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           _buildHeader(),
-          KeepAlivePage(child: content), // Envolvemos el contenido aquí
+          KeepAlivePage(child: content),
         ],
       ),
     );
@@ -330,7 +344,7 @@ class _CaptacionState extends State<Captacion> {
   }
 }
 
-// Widget auxiliar para mantener el estado
+/// Widget auxiliar para mantener el estado
 class KeepAlivePage extends StatefulWidget {
   final Widget child;
 
