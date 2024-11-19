@@ -135,7 +135,7 @@ class _BusquedaPorNombreScreenState extends State<BusquedaPorNombreScreen> {
           child: IconButton(
             icon: const Icon(Icons.arrow_back, color: Color(0xFF1877F2), size: 32),
             onPressed: () {
-              Navigator.pushNamed(context, '/');
+              Navigator.pushNamed(context, '/captacion_busqeda_persona');
             },
           ),
         ),
