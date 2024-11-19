@@ -78,7 +78,6 @@ class _MapSelectionScreenState extends State<MapSelectionScreen> {
             onPressed: _selectedLocation != null
                 ? () {
                     widget.onLocationSelected(_selectedLocation!);
-                    // Navigator.of(context).pop(); // Eliminar esta línea
                   }
                 : null,
           ),

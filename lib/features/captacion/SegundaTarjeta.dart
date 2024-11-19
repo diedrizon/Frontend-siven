@@ -13,6 +13,11 @@ import 'package:siven_app/widgets/seleccion_red_servicio_trabajador_widget.dart'
 import 'package:siven_app/widgets/search_persona_widget.dart';
 import 'package:siven_app/widgets/TextField.dart'; // Importar CustomTextFieldDropdown
 
+// Importaciones adicionales necesarias
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:location/location.dart'; // Para obtener la ubicación
+import 'package:geojson/geojson.dart'; // Para trabajar con GeoJSON
+
 /// Formateador para limitar la entrada numérica a un rango específico.
 class RangeTextInputFormatter extends TextInputFormatter {
   final int min;
@@ -149,7 +154,6 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
   String? selectedEstablecimientoTrasladoId;
 
   // Variable para almacenar el ID de la persona que captó
-  // ignore: unused_field
   int? _personaCaptadaId;
 
   @override
@@ -461,38 +465,151 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
   }
 
   // Función para abrir la pantalla de selección de ubicación
-  Future<void> _abrirSeleccionUbicacion({required bool isLatitude}) async {
-    final selectedLocation = await Navigator.of(context).push<LatLng>(
-      MaterialPageRoute(
-        builder: (context) => MapSelectionScreen(
-          onLocationSelected: (LatLng location) {
-            Navigator.of(context).pop(location);
-          },
-        ),
-      ),
-    );
+  Future<void> _abrirSeleccionUbicacion() async {
+    // Verificar la conectividad a internet
+    var connectivityResult = await (Connectivity().checkConnectivity());
+    if (connectivityResult == ConnectivityResult.none) {
+      // No hay conexión a internet
+      // Obtener la ubicación actual usando GPS
+      Location location = Location();
 
-    if (selectedLocation != null) {
-      setState(() {
-        if (isLatitude) {
+      bool serviceEnabled = await location.serviceEnabled();
+      if (!serviceEnabled) {
+        serviceEnabled = await location.requestService();
+        if (!serviceEnabled) {
+          // No se puede obtener la ubicación
+          return;
+        }
+      }
+
+      PermissionStatus permissionGranted = await location.hasPermission();
+      if (permissionGranted == PermissionStatus.denied ||
+          permissionGranted == PermissionStatus.deniedForever) {
+        permissionGranted = await location.requestPermission();
+        if (permissionGranted != PermissionStatus.granted) {
+          // No se puede obtener la ubicación
+          return;
+        }
+      }
+
+      // Obtener la ubicación actual
+      final locationData = await location.getLocation();
+
+      if (locationData.latitude != null && locationData.longitude != null) {
+        setState(() {
+          latitudOcurrenciaController.text =
+              locationData.latitude!.toStringAsFixed(6);
+          longitudOcurrenciaController.text =
+              locationData.longitude!.toStringAsFixed(6);
+        });
+
+        print(
+            'Ubicación actual: Latitud=${locationData.latitude}, Longitud=${locationData.longitude}');
+
+        // Opcional: Comparar con GeoJSON para determinar la región
+        await _compararConGeoJSON(
+            locationData.latitude!, locationData.longitude!);
+      } else {
+        // No se pudo obtener la ubicación
+        print('No se pudo obtener la ubicación actual');
+      }
+    } else {
+      // Hay conexión a internet, proceder como antes
+      final selectedLocation = await Navigator.of(context).push<LatLng>(
+        MaterialPageRoute(
+          builder: (context) => MapSelectionScreen(
+            onLocationSelected: (LatLng location) {
+              Navigator.of(context).pop(location);
+            },
+          ),
+        ),
+      );
+
+      if (selectedLocation != null) {
+        setState(() {
           latitudOcurrenciaController.text =
               selectedLocation.latitude.toStringAsFixed(6);
-        } else {
           longitudOcurrenciaController.text =
               selectedLocation.longitude.toStringAsFixed(6);
-        }
-      });
+        });
 
-      print(
-          'Ubicación seleccionada: Latitud=${selectedLocation.latitude}, Longitud=${selectedLocation.longitude}');
+        print(
+            'Ubicación seleccionada: Latitud=${selectedLocation.latitude}, Longitud=${selectedLocation.longitude}');
+      }
     }
+  }
+
+  // Función para comparar la ubicación actual con el GeoJSON
+  Future<void> _compararConGeoJSON(double lat, double lng) async {
+    try {
+      String geojsonString =
+          await rootBundle.loadString('lib/assets/GeoJson/ni.json');
+
+      final geojson = GeoJson();
+      await geojson.parse(geojsonString, verbose: true);
+
+      GeoJsonFeature? featureEncontrado;
+
+      for (var feature in geojson.features) {
+        if (feature.geometry != null &&
+            feature.geometry!.type == GeoJsonFeatureType.polygon) {
+          final polygon = feature.geometry as GeoJsonPolygon;
+          if (_puntoEnPoligono(lat, lng, polygon)) {
+            featureEncontrado = feature;
+            break;
+          }
+        } else if (feature.geometry != null &&
+            feature.geometry!.type == GeoJsonFeatureType.multipolygon) {
+          final multiPolygon = feature.geometry as GeoJsonMultiPolygon;
+          for (var polygon in multiPolygon.polygons) {
+            if (_puntoEnPoligono(lat, lng, polygon)) {
+              featureEncontrado = feature;
+              break;
+            }
+          }
+          if (featureEncontrado != null) {
+            break;
+          }
+        }
+      }
+
+      if (featureEncontrado != null) {
+        print('Estás en la región: ${featureEncontrado.properties}');
+        // Aquí puedes actualizar algún campo o mostrar información al usuario
+      } else {
+        print('No se encontró la región correspondiente en el GeoJSON');
+      }
+
+      geojson.dispose();
+    } catch (e) {
+      print('Error al procesar el GeoJSON: $e');
+    }
+  }
+
+  // Función para determinar si un punto está dentro de un polígono
+  bool _puntoEnPoligono(double lat, double lng, GeoJsonPolygon polygon) {
+    // Implementación del algoritmo de ray casting
+    int intersections = 0;
+    for (var ring in polygon.geoSeries) {
+      for (int i = 0; i < ring.geoPoints.length - 1; i++) {
+        double x1 = ring.geoPoints[i].longitude;
+        double y1 = ring.geoPoints[i].latitude;
+        double x2 = ring.geoPoints[i + 1].longitude;
+        double y2 = ring.geoPoints[i + 1].latitude;
+
+        if (((y1 > lat) != (y2 > lat)) &&
+            (lng < (x2 - x1) * (lat - y1) / (y2 - y1 + x1))) {
+          intersections++;
+        }
+      }
+    }
+    return (intersections % 2) != 0;
   }
 
   /// Método auxiliar para construir campos de texto con ícono de mapa
   Widget buildTextFieldWithMapIcon({
     required String label,
     required TextEditingController controller,
-    required bool isLatitude,
     String? hintText,
     IconData? prefixIcon,
     TextInputType keyboardType = TextInputType.text,
@@ -501,6 +618,7 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
     VoidCallback? onTap,
     bool enabled = true,
     int maxLines = 1,
+    Widget? suffixIcon,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -512,17 +630,13 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
         const SizedBox(height: 5),
         TextFormField(
           controller: controller,
-          readOnly:
-              true, // Hacer de solo lectura para evitar modificaciones manuales
+          readOnly: true, // Hacer de solo lectura
           decoration: InputDecoration(
             hintText: hintText,
             prefixIcon: prefixIcon != null
                 ? Icon(prefixIcon, color: const Color(0xFF00C1D4))
                 : null,
-            suffixIcon: IconButton(
-              icon: const Icon(Icons.map, color: Color(0xFF00C1D4)),
-              onPressed: () => _abrirSeleccionUbicacion(isLatitude: isLatitude),
-            ),
+            suffixIcon: suffixIcon,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: Color(0xFF00C1D4)),
@@ -648,59 +762,6 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
     );
   }
 
-  /// Método auxiliar para construir campos desplegables usando DropdownButtonFormField (si se necesita)
-  Widget buildDropdownField({
-    required String label,
-    required String? value,
-    required List<DropdownMenuItem<String>>? items,
-    required ValueChanged<String?> onChanged,
-    String? hintText,
-    IconData? prefixIcon,
-    bool isLoading = false,
-    String? errorText,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 16, color: Colors.black),
-        ),
-        const SizedBox(height: 5),
-        isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : errorText != null
-                ? Text(
-                    errorText,
-                    style: const TextStyle(color: Colors.red),
-                  )
-                : DropdownButtonFormField<String>(
-                    value: value,
-                    decoration: InputDecoration(
-                      hintText: hintText,
-                      prefixIcon: prefixIcon != null
-                          ? Icon(prefixIcon, color: const Color(0xFF00C1D4))
-                          : null,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                        borderSide: const BorderSide(color: Color(0xFF00C1D4)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                        borderSide: const BorderSide(color: Color(0xFF00C1D4)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                        borderSide: const BorderSide(color: Color(0xFF00C1D4)),
-                      ),
-                    ),
-                    items: items,
-                    onChanged: onChanged,
-                  ),
-      ],
-    );
-  }
-
   /// Método auxiliar para construir campos de selección de fecha
   Widget buildDatePickerField({
     required String label,
@@ -751,7 +812,6 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
     // Asegurarse de que la semana esté en el rango correcto
     if (semana < 1) {
       // Puede pertenecer a la última semana del año anterior
-      // Aquí puedes manejar este caso si es necesario
       semana = 1; // Por simplicidad, asignamos 1
     } else if (semana > 53) {
       semana = 53;
@@ -861,7 +921,6 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
                 prefixIcon: Icons.local_hospital,
                 onSearch: () {
                   // Implementa aquí la lógica para buscar establecimientos si es necesario
-                  // Por ejemplo, abrir otro diálogo o navegar a una pantalla de búsqueda
                 },
               ),
               const SizedBox(height: 20),
@@ -930,7 +989,6 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
                   prefixIcon: Icons.local_hospital,
                   onSearch: () {
                     // Implementa aquí la lógica para buscar establecimientos si es necesario
-                    // Por ejemplo, abrir otro diálogo o navegar a una pantalla de búsqueda
                   },
                 ),
                 const SizedBox(height: 20),
@@ -962,7 +1020,6 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
               buildTextFieldWithMapIcon(
                 label: 'Latitud de Ocurrencia *',
                 controller: latitudOcurrenciaController,
-                isLatitude: true,
                 hintText: 'Ingresa la latitud',
                 prefixIcon: Icons.map,
                 keyboardType:
@@ -970,14 +1027,17 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                 ],
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.map, color: Color(0xFF00C1D4)),
+                  onPressed: _abrirSeleccionUbicacion, // Usar la nueva función
+                ),
               ),
               const SizedBox(height: 20),
 
-              // Campo: Longitud de Ocurrencia con Ícono de Mapa
+              // Campo: Longitud de Ocurrencia SIN Ícono de Mapa
               buildTextFieldWithMapIcon(
                 label: 'Longitud de Ocurrencia *',
                 controller: longitudOcurrenciaController,
-                isLatitude: false,
                 hintText: 'Ingresa la longitud',
                 prefixIcon: Icons.map,
                 keyboardType:
@@ -985,6 +1045,7 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                 ],
+                suffixIcon: null, // Eliminar el ícono de mapa
               ),
               const SizedBox(height: 20),
 
