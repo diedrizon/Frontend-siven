@@ -12,10 +12,10 @@ class TerceraTarjeta extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _TerceraTarjetaState createState() => _TerceraTarjetaState();
+  TerceraTarjetaState createState() => TerceraTarjetaState();
 }
 
-class _TerceraTarjetaState extends State<TerceraTarjeta> {
+class TerceraTarjetaState extends State<TerceraTarjeta> {
   final TextEditingController puestoNotificacionController =
       TextEditingController();
   final TextEditingController numeroClaveController =
@@ -27,8 +27,10 @@ class _TerceraTarjetaState extends State<TerceraTarjeta> {
   List<Map<String, dynamic>> _puestosNotificacion = [];
   String? _selectedPuestoNotificacionId;
 
-  int?
-      tipoBusquedaValue; // Variable para almacenar el valor de Tipo de Búsqueda
+  int? tipoBusquedaValue; // Variable para almacenar el valor de Tipo de Búsqueda
+
+  // Opciones para campos de preguntas binarias
+  final List<String> opcionesTipoBusqueda = ['Sí', 'No'];
 
   @override
   void initState() {
@@ -59,15 +61,23 @@ class _TerceraTarjetaState extends State<TerceraTarjeta> {
     }
   }
 
+  /// Método para obtener los datos ingresados.
+  Map<String, dynamic> getData() {
+    return {
+      'selectedPuestoNotificacionId': _selectedPuestoNotificacionId,
+      'numeroClave': numeroClaveController.text,
+      'numeroLamina': numeroLaminaController.text,
+      'tomaMuestra': tomaMuestraController.text,
+      'tipoBusqueda': tipoBusquedaValue,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     // Convertir _puestosNotificacion a List<String> para el CustomTextFieldDropdown
     List<String> opcionesPuestos = _puestosNotificacion.map((puesto) {
       return puesto['nombre'].toString();
     }).toList();
-
-    // Opciones para Tipo de Búsqueda
-    List<String> opcionesTipoBusqueda = ['Si', 'No'];
 
     return Card(
       color: Colors.white, // Establecer color de fondo blanco
@@ -84,38 +94,10 @@ class _TerceraTarjetaState extends State<TerceraTarjeta> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Título de la tarjeta
-              Row(
-                children: [
-                  Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF00C1D4),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Text(
-                      '3',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Datos de Notificación',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF00C1D4),
-                    ),
-                  ),
-                ],
-              ),
+              _buildCardTitle(),
               const SizedBox(height: 20),
 
-              // Campo: Puesto de Notificación (usando CustomTextFieldDropdown personalizado)
+              // Campo: Puesto de Notificación
               _buildDropdownField(
                 label: 'Puesto de Notificación *',
                 dropdown: CustomTextFieldDropdown(
@@ -135,22 +117,18 @@ class _TerceraTarjetaState extends State<TerceraTarjeta> {
                       _selectedPuestoNotificacionId =
                           selectedPuesto['id_puesto_notificacion']?.toString();
                     });
-
-                    print('ID seleccionado: $_selectedPuestoNotificacionId');
-                    print(
-                        'Nombre del puesto: ${puestoNotificacionController.text}');
                   },
                 ),
               ),
               const SizedBox(height: 20),
 
-              // Campo: Número de clave (anteriormente Clave de Notificación)
+              // Campo: Número de clave
               _buildTextField(
                 label: 'Número de clave *',
                 controller: numeroClaveController,
                 hintText: 'Ingresa el número de clave',
                 icon: Icons.vpn_key,
-                // Eliminado inputFormatters para permitir letras y números
+                // Sin inputFormatters para permitir letras y números
               ),
               const SizedBox(height: 20),
 
@@ -167,7 +145,7 @@ class _TerceraTarjetaState extends State<TerceraTarjeta> {
               ),
               const SizedBox(height: 20),
 
-              // Campo: Toma de Muestra (ahora TextField numérico)
+              // Campo: Toma de Muestra
               _buildTextField(
                 label: 'Toma de Muestra *',
                 controller: tomaMuestraController,
@@ -180,7 +158,7 @@ class _TerceraTarjetaState extends State<TerceraTarjeta> {
               ),
               const SizedBox(height: 20),
 
-              // Campo: Tipo de Búsqueda (Si/No) usando CustomTextFieldDropdown personalizado
+              // Campo: Tipo de Búsqueda (Sí/No)
               _buildDropdownField(
                 label: 'Tipo de Búsqueda *',
                 dropdown: CustomTextFieldDropdown(
@@ -192,7 +170,7 @@ class _TerceraTarjetaState extends State<TerceraTarjeta> {
                   borderRadius: 8.0,
                   onChanged: (selectedOption) {
                     setState(() {
-                      if (selectedOption == 'Si') {
+                      if (selectedOption == 'Sí') {
                         tipoBusquedaValue = 1;
                       } else if (selectedOption == 'No') {
                         tipoBusquedaValue = 0;
@@ -200,8 +178,6 @@ class _TerceraTarjetaState extends State<TerceraTarjeta> {
                         tipoBusquedaValue = null;
                       }
                     });
-
-                    print('Tipo de Búsqueda seleccionado: $tipoBusquedaValue');
                   },
                 ),
               ),
@@ -219,7 +195,7 @@ class _TerceraTarjetaState extends State<TerceraTarjeta> {
     required String hintText,
     required IconData icon,
     TextInputType keyboardType = TextInputType.text,
-    List<TextInputFormatter>? inputFormatters, // Añadido
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -232,7 +208,7 @@ class _TerceraTarjetaState extends State<TerceraTarjeta> {
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
-          inputFormatters: inputFormatters, // Aplicar inputFormatters
+          inputFormatters: inputFormatters,
           decoration: InputDecoration(
             hintText: hintText,
             prefixIcon: Icon(icon, color: const Color(0xFF00C1D4)),
@@ -254,7 +230,7 @@ class _TerceraTarjetaState extends State<TerceraTarjeta> {
     );
   }
 
-  // Método de ayuda para construir campos desplegables con etiquetas
+  // Método para construir campos desplegables con etiquetas
   Widget _buildDropdownField({
     required String label,
     required CustomTextFieldDropdown dropdown,
@@ -271,6 +247,39 @@ class _TerceraTarjetaState extends State<TerceraTarjeta> {
         ),
         const SizedBox(height: 5),
         dropdown,
+      ],
+    );
+  }
+
+  /// Construye el título de la tarjeta.
+  Widget _buildCardTitle() {
+    return Row(
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: const Color(0xFF00C1D4),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          alignment: Alignment.center,
+          child: const Text(
+            '3',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        const Text(
+          'Datos de Notificación',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF00C1D4),
+          ),
+        ),
       ],
     );
   }

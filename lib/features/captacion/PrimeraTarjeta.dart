@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:siven_app/core/services/catalogo_service_red_servicio.dart';
 import 'package:siven_app/core/services/selection_storage_service.dart';
 import 'package:siven_app/core/services/Maternidadservice.dart';
+import 'package:siven_app/core/services/ComorbilidadesService.dart'; // Asegúrate de importar el servicio
 import 'package:siven_app/widgets/seleccion_red_servicio_trabajador_widget.dart';
 import 'package:siven_app/widgets/TextField.dart';
 
@@ -41,6 +42,7 @@ class PrimeraTarjeta extends StatefulWidget {
   final CatalogServiceRedServicio catalogService;
   final SelectionStorageService selectionStorageService;
   final MaternidadService maternidadService;
+  final ComorbilidadesService comorbilidadesService; // Añade el servicio
   final String? idEventoSalud; // ID del evento de salud
   final int? idPersona; // ID de la persona
 
@@ -51,15 +53,17 @@ class PrimeraTarjeta extends StatefulWidget {
     required this.catalogService,
     required this.selectionStorageService,
     required this.maternidadService,
+    required this.comorbilidadesService, // Inicializa el servicio
     this.idEventoSalud,
     this.idPersona,
   }) : super(key: key);
 
   @override
-  _PrimeraTarjetaState createState() => _PrimeraTarjetaState();
+  PrimeraTarjetaState createState() => PrimeraTarjetaState();
 }
 
-class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
+// Cambiado el nombre de la clase de estado para que sea pública
+class PrimeraTarjetaState extends State<PrimeraTarjeta> {
   // Controladores de texto
   final TextEditingController maternidadController = TextEditingController();
   final TextEditingController semanasGestacionController =
@@ -107,12 +111,10 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
     DropdownOption(id: '0', name: 'No'),
   ];
 
-  final List<DropdownOption> opcionesComorbilidad = [
-    DropdownOption(id: '1', name: 'Diabetes'),
-    DropdownOption(id: '2', name: 'Hipertensión'),
-    DropdownOption(id: '3', name: 'Enfermedad Pulmonar'),
-    DropdownOption(id: '4', name: 'Otra'),
-  ];
+  // Opciones dinámicas de comorbilidades
+  List<DropdownOption> opcionesComorbilidad = [];
+  bool isLoadingComorbilidades = true;
+  String? errorComorbilidades;
 
   @override
   void initState() {
@@ -120,6 +122,7 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
     print(
         'PrimeraTarjeta - ID de persona: ${widget.idPersona}, ID de evento de salud: ${widget.idEventoSalud}');
     fetchOpcionesMaternidad();
+    fetchOpcionesComorbilidades(); // Cargar comorbilidades dinámicamente
 
     tieneComorbilidadesController
         .addListener(_actualizarTieneComorbilidades);
@@ -179,6 +182,41 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
     }
   }
 
+  /// Fetch y asigna las opciones de comorbilidades dinámicamente.
+  Future<void> fetchOpcionesComorbilidades() async {
+    try {
+      List<Map<String, dynamic>> comorbilidades =
+          await widget.comorbilidadesService.listarComorbilidades();
+      List<DropdownOption> opciones = comorbilidades.map((c) {
+        return DropdownOption(
+          id: c['id_comorbilidades'].toString(),
+          name: c['nombre'] as String,
+        );
+      }).toList();
+
+      if (!mounted) return;
+
+      setState(() {
+        opcionesComorbilidad = opciones;
+        isLoadingComorbilidades = false;
+      });
+
+      print('Opciones de Comorbilidades cargadas:');
+      opcionesComorbilidad.forEach((opcion) {
+        print('ID: ${opcion.id}, Nombre: ${opcion.name}');
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        errorComorbilidades = e.toString();
+        isLoadingComorbilidades = false;
+      });
+
+      print('Error al cargar Comorbilidades: $errorComorbilidades');
+    }
+  }
+
   /// Actualiza el estado de si tiene comorbilidades.
   void _actualizarTieneComorbilidades() {
     setState(() {
@@ -228,22 +266,6 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
 
       print('ID seleccionado SILAIS: $selectedSILAISId');
       print('ID seleccionado Establecimiento: $selectedEstablecimientoId');
-    }
-  }
-
-  /// Obtiene el ID de la comorbilidad basado en el nombre.
-  String _getIdComorbilidad(String name) {
-    switch (name) {
-      case 'Diabetes':
-        return '1';
-      case 'Hipertensión':
-        return '2';
-      case 'Enfermedad Pulmonar':
-        return '3';
-      case 'Otra':
-        return '4';
-      default:
-        return '';
     }
   }
 
@@ -338,6 +360,23 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
         ),
       ],
     );
+  }
+
+  /// Método para obtener los datos ingresados.
+  Map<String, dynamic> getData() {
+    return {
+      'idEventoSalud': widget.idEventoSalud,
+      'idPersona': widget.idPersona,
+      'selectedMaternidadId': selectedMaternidadId,
+      'semanasGestacion': semanasGestacionController.text,
+      'esTrabajadorSalud': selectedEsTrabajadorSaludId,
+      'selectedSILAISId': selectedSILAISId,
+      'selectedEstablecimientoId': selectedEstablecimientoId,
+      'tieneComorbilidades': selectedTieneComorbilidadesId,
+      'selectedComorbilidadId': selectedComorbilidadId,
+      'nombreJefeFamilia': nombreJefeFamiliaController.text,
+      'telefonoReferencia': telefonoReferenciaController.text,
+    };
   }
 
   @override
@@ -451,34 +490,43 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
               ),
               const SizedBox(height: 20),
               if (_tieneComorbilidades) ...[
-                _buildCustomDropdownField(
-                  label: 'Comorbilidades *',
-                  options: opcionesComorbilidad,
-                  selectedId: selectedComorbilidadId,
-                  controller: comorbilidadesController,
-                  icon: Icons.medical_services,
-                  hintText: 'Selecciona una comorbilidad',
-                  onChanged: (selectedId) {
-                    if (selectedId == null) return;
-                    final opcionComorbilidad = opcionesComorbilidad.firstWhere(
-                      (option) => option.id == selectedId,
-                      orElse: () => DropdownOption(id: '', name: ''),
-                    );
-                    setState(() {
-                      selectedComorbilidadId =
-                          opcionComorbilidad.id.isNotEmpty
-                              ? opcionComorbilidad.id
-                              : null;
-                      comorbilidadesController.text =
-                          opcionComorbilidad.name.isNotEmpty
-                              ? opcionComorbilidad.name
-                              : '';
-                    });
+                isLoadingComorbilidades
+                    ? const CircularProgressIndicator()
+                    : errorComorbilidades != null
+                        ? Text(
+                            'Error al cargar comorbilidades: $errorComorbilidades',
+                            style: const TextStyle(color: Colors.red),
+                          )
+                        : _buildCustomDropdownField(
+                            label: 'Comorbilidades *',
+                            options: opcionesComorbilidad,
+                            selectedId: selectedComorbilidadId,
+                            controller: comorbilidadesController,
+                            icon: Icons.medical_services,
+                            hintText: 'Selecciona una comorbilidad',
+                            onChanged: (selectedId) {
+                              if (selectedId == null) return;
+                              final opcionComorbilidad = opcionesComorbilidad
+                                  .firstWhere(
+                                    (option) => option.id == selectedId,
+                                    orElse: () =>
+                                        DropdownOption(id: '', name: ''),
+                                  );
+                              setState(() {
+                                selectedComorbilidadId =
+                                    opcionComorbilidad.id.isNotEmpty
+                                        ? opcionComorbilidad.id
+                                        : null;
+                                comorbilidadesController.text =
+                                    opcionComorbilidad.name.isNotEmpty
+                                        ? opcionComorbilidad.name
+                                        : '';
+                              });
 
-                    print(
-                        'ID seleccionado Comorbilidad: $selectedComorbilidadId');
-                  },
-                ),
+                              print(
+                                  'ID seleccionado Comorbilidad: $selectedComorbilidadId');
+                            },
+                          ),
                 const SizedBox(height: 20),
               ],
               _buildNombreJefeFamiliaField(),

@@ -11,9 +11,8 @@ import 'package:siven_app/core/services/SintomasService.dart';
 import 'package:siven_app/widgets/MapSelectionScreen.dart';
 import 'package:siven_app/widgets/seleccion_red_servicio_trabajador_widget.dart';
 import 'package:siven_app/widgets/search_persona_widget.dart';
-import 'package:siven_app/widgets/TextField.dart'; // Importar CustomTextFieldDropdown
+import 'package:siven_app/widgets/TextField.dart';
 
-// Importaciones adicionales necesarias
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:location/location.dart'; // Para obtener la ubicación
 import 'package:geojson/geojson.dart'; // Para trabajar con GeoJSON
@@ -68,10 +67,10 @@ class SegundaTarjeta extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _SegundaTarjetaState createState() => _SegundaTarjetaState();
+  SegundaTarjetaState createState() => SegundaTarjetaState();
 }
 
-class _SegundaTarjetaState extends State<SegundaTarjeta> {
+class SegundaTarjetaState extends State<SegundaTarjeta> {
   // Controladores de texto
   final TextEditingController lugarCaptacionController =
       TextEditingController();
@@ -138,8 +137,8 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
 
   // Opciones para campos de preguntas binarias
   final List<DropdownOption> yesNoOptions = [
-    DropdownOption(id: 'si', name: 'Sí'),
-    DropdownOption(id: 'no', name: 'No'),
+    DropdownOption(id: '1', name: 'Sí'),
+    DropdownOption(id: '0', name: 'No'),
   ];
 
   bool _presentaSintomas = false;
@@ -820,6 +819,32 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
     return semana;
   }
 
+  /// Método para obtener los datos ingresados.
+  Map<String, dynamic> getData() {
+    return {
+      'selectedLugarCaptacionId': selectedLugarCaptacionId,
+      'selectedCondicionPersonaId': selectedCondicionPersonaId,
+      'fechaCaptacion': fechaCaptacionController.text,
+      'semanaEpidemiologica': semanaEpidemiologicaController.text,
+      'selectedSILAISCaptacionId': selectedSILAISCaptacionId,
+      'selectedEstablecimientoCaptacionId': selectedEstablecimientoCaptacionId,
+      'personaCaptadaId': _personaCaptadaId,
+      'fueReferido': fueReferidoController.text == 'Sí' ? 1 : 0,
+      'selectedSILAISTrasladoId': selectedSILAISTrasladoId,
+      'selectedEstablecimientoTrasladoId': selectedEstablecimientoTrasladoId,
+      'selectedSitioExposicionId': selectedSitioExposicionId,
+      'latitudOcurrencia': latitudOcurrenciaController.text,
+      'longitudOcurrencia': longitudOcurrenciaController.text,
+      'presentaSintomas': presentaSintomasController.text == 'Sí' ? 1 : 0,
+      'fechaInicioSintomas': fechaInicioSintomasController.text,
+      'selectedSintomaId': selectedSintomaId,
+      'esViajero': esViajeroController.text == 'Sí' ? 1 : 0,
+      'fechaIngresoPais': fechaIngresoPaisController.text,
+      'selectedLugarIngresoPaisId': selectedLugarIngresoPaisId,
+      'observacionesCaptacion': observacionesCaptacionController.text,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -941,17 +966,17 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
                 label: '¿Fue Referido? *',
                 options: yesNoOptions,
                 selectedId: fueReferidoController.text.isNotEmpty
-                    ? (fueReferidoController.text == 'Sí' ? 'si' : 'no')
+                    ? (fueReferidoController.text == 'Sí' ? '1' : '0')
                     : null,
                 controller: fueReferidoController,
                 icon: Icons.assignment_return,
                 hintText: 'Selecciona una opción',
                 onChanged: (selectedId) {
                   setState(() {
-                    if (selectedId == 'si') {
+                    if (selectedId == '1') {
                       fueReferidoController.text = 'Sí';
                       _fueReferido = true;
-                    } else if (selectedId == 'no') {
+                    } else if (selectedId == '0') {
                       fueReferidoController.text = 'No';
                       _fueReferido = false;
                       silaisTrasladoController.clear();
@@ -1054,17 +1079,17 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
                 label: '¿Presenta Síntomas? *',
                 options: yesNoOptions,
                 selectedId: presentaSintomasController.text.isNotEmpty
-                    ? (presentaSintomasController.text == 'Sí' ? 'si' : 'no')
+                    ? (presentaSintomasController.text == 'Sí' ? '1' : '0')
                     : null,
                 controller: presentaSintomasController,
                 icon: Icons.medical_services,
                 hintText: 'Selecciona una opción',
                 onChanged: (selectedId) {
                   setState(() {
-                    if (selectedId == 'si') {
+                    if (selectedId == '1') {
                       presentaSintomasController.text = 'Sí';
                       _presentaSintomas = true;
-                    } else if (selectedId == 'no') {
+                    } else if (selectedId == '0') {
                       presentaSintomasController.text = 'No';
                       _presentaSintomas = false;
                       fechaInicioSintomasController.clear();
@@ -1119,17 +1144,17 @@ class _SegundaTarjetaState extends State<SegundaTarjeta> {
                 label: '¿Es Viajero? *',
                 options: yesNoOptions,
                 selectedId: esViajeroController.text.isNotEmpty
-                    ? (esViajeroController.text == 'Sí' ? 'si' : 'no')
+                    ? (esViajeroController.text == 'Sí' ? '1' : '0')
                     : null,
                 controller: esViajeroController,
                 icon: Icons.airplanemode_active,
                 hintText: 'Selecciona una opción',
                 onChanged: (selectedId) {
                   setState(() {
-                    if (selectedId == 'si') {
+                    if (selectedId == '1') {
                       esViajeroController.text = 'Sí';
                       _esViajero = true;
-                    } else if (selectedId == 'no') {
+                    } else if (selectedId == '0') {
                       esViajeroController.text = 'No';
                       _esViajero = false;
                       fechaIngresoPaisController.clear();

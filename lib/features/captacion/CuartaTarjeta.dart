@@ -1,7 +1,8 @@
-// lib/widgets/CuartaTarjeta.dart
+// CuartaTarjeta.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart'; // Agregado para formateo de fechas
 import 'package:siven_app/core/services/DiagnosticoService.dart';
 import 'package:siven_app/core/services/ResultadoDiagnosticoService.dart';
 import 'package:siven_app/core/services/catalogo_service_red_servicio.dart';
@@ -33,10 +34,10 @@ class CuartaTarjeta extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _CuartaTarjetaState createState() => _CuartaTarjetaState();
+  CuartaTarjetaState createState() => CuartaTarjetaState();
 }
 
-class _CuartaTarjetaState extends State<CuartaTarjeta> {
+class CuartaTarjetaState extends State<CuartaTarjeta> {
   // Controladores de texto para cada campo
   final TextEditingController diagnosticoController = TextEditingController();
   final TextEditingController resultadoDiagnosticoController = TextEditingController();
@@ -90,6 +91,23 @@ class _CuartaTarjetaState extends State<CuartaTarjeta> {
     silaisDiagnosticoController.dispose();
     establecimientoDiagnosticoController.dispose();
     super.dispose();
+  }
+
+  /// Método para obtener los datos ingresados.
+  Map<String, dynamic> getData() {
+    return {
+      'selectedDiagnosticoId': _selectedDiagnosticoId,
+      'fechaTomaMuestra': fechaTomaMuestraController.text,
+      'fechaRecepcionLab': fechaRecepcionLabController.text,
+      'fechaDiagnostico': fechaDiagnosticoController.text,
+      'selectedResultadoDiagnosticoId': _selectedResultadoDiagnosticoId,
+      'densidadVivaxEAS': densidadVivaxEASController.text,
+      'densidadVivaxESS': densidadVivaxESSController.text,
+      'densidadFalciparumEAS': densidadFalciparumEASController.text,
+      'densidadFalciparumESS': densidadFalciparumESSController.text,
+      'selectedSILAISDiagnosticoId': _selectedSILAISDiagnosticoId,
+      'selectedEstablecimientoDiagnosticoId': _selectedEstablecimientoDiagnosticoId,
+    };
   }
 
   /// Función para cargar diagnósticos desde el servicio
@@ -160,7 +178,7 @@ class _CuartaTarjetaState extends State<CuartaTarjeta> {
     }
   }
 
-  /// Función para guardar los datos (simulación)
+  /// Función para guardar los datos
   Future<void> _guardarDatos() async {
     setState(() {
       _isSaving = true;
@@ -306,13 +324,17 @@ class _CuartaTarjetaState extends State<CuartaTarjeta> {
       onTap: () async {
         DateTime? pickedDate = await showDatePicker(
           context: context,
+          // Removido el locale para evitar posibles errores
           initialDate: DateTime.now(),
           firstDate: DateTime(2000),
           lastDate: DateTime(2101),
         );
+
         if (pickedDate != null) {
+          // Usar DateFormat para formatear la fecha de manera consistente
+          String formattedDate = DateFormat('yyyy-MM-dd').format(pickedDate);
           setState(() {
-            controller.text = "${pickedDate.toLocal()}".split(' ')[0];
+            controller.text = formattedDate;
           });
         }
       },

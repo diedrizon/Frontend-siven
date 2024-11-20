@@ -1,5 +1,3 @@
-// lib/screens/captacion.dart
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
@@ -17,6 +15,7 @@ import 'package:siven_app/core/services/SintomasService.dart';
 import 'package:siven_app/core/services/PuestoNotificacionService.dart';
 import 'package:siven_app/core/services/DiagnosticoService.dart';
 import 'package:siven_app/core/services/ResultadoDiagnosticoService.dart';
+import 'package:siven_app/core/services/ComorbilidadesService.dart';
 
 // Importaciones de widgets personalizados
 import 'package:siven_app/widgets/version.dart';
@@ -55,15 +54,26 @@ class _CaptacionState extends State<Captacion> {
   late PuestoNotificacionService puestoNotificacionService;
   late DiagnosticoService diagnosticoService;
   late ResultadoDiagnosticoService resultadoDiagnosticoService;
+  late ComorbilidadesService comorbilidadesService;
 
-  // Instancias de las tarjetas
+  // Instancias de las tarjetas con GlobalKey
+  late GlobalKey<PrimeraTarjetaState> _primeraTarjetaKey;
   late PrimeraTarjeta _primeraTarjeta;
+
+  late GlobalKey<SegundaTarjetaState> _segundaTarjetaKey;
   late SegundaTarjeta _segundaTarjeta;
+
+  late GlobalKey<TerceraTarjetaState> _terceraTarjetaKey;
   late TerceraTarjeta _terceraTarjeta;
+
+  late GlobalKey<CuartaTarjetaState> _cuartaTarjetaKey;
   late CuartaTarjeta _cuartaTarjeta;
 
   // Flag para inicializar las tarjetas una sola vez
   bool _cardsInitialized = false;
+
+  // Variable para almacenar los datos
+  Map<String, dynamic> collectedData = {};
 
   @override
   void initState() {
@@ -87,6 +97,7 @@ class _CaptacionState extends State<Captacion> {
     puestoNotificacionService = PuestoNotificacionService(httpService: httpService);
     diagnosticoService = DiagnosticoService(httpService: httpService);
     resultadoDiagnosticoService = ResultadoDiagnosticoService(httpService: httpService);
+    comorbilidadesService = ComorbilidadesService(httpService: httpService);
   }
 
   @override
@@ -105,7 +116,10 @@ class _CaptacionState extends State<Captacion> {
       final int? idPersona = args != null && args is Map<String, dynamic> ? args['id_persona'] as int? : null;
       final int? idEventoSalud = args != null && args is Map<String, dynamic> ? args['id_evento_salud'] as int? : null;
 
+      _primeraTarjetaKey = GlobalKey<PrimeraTarjetaState>();
+
       _primeraTarjeta = PrimeraTarjeta(
+        key: _primeraTarjetaKey,
         nombreEventoSeleccionado: _selectedEventoName,
         nombreCompleto: nombreCompleto,
         catalogService: catalogService,
@@ -113,9 +127,13 @@ class _CaptacionState extends State<Captacion> {
         maternidadService: maternidadService,
         idEventoSalud: idEventoSalud?.toString(),
         idPersona: idPersona,
+        comorbilidadesService: comorbilidadesService,
       );
 
+      _segundaTarjetaKey = GlobalKey<SegundaTarjetaState>();
+
       _segundaTarjeta = SegundaTarjeta(
+        key: _segundaTarjetaKey,
         catalogService: catalogService,
         selectionStorageService: selectionStorageService,
         lugarCaptacionService: lugarCaptacionService,
@@ -125,11 +143,17 @@ class _CaptacionState extends State<Captacion> {
         sintomasService: sintomasService,
       );
 
+      _terceraTarjetaKey = GlobalKey<TerceraTarjetaState>();
+
       _terceraTarjeta = TerceraTarjeta(
+        key: _terceraTarjetaKey,
         puestoNotificacionService: puestoNotificacionService,
       );
 
+      _cuartaTarjetaKey = GlobalKey<CuartaTarjetaState>();
+
       _cuartaTarjeta = CuartaTarjeta(
+        key: _cuartaTarjetaKey,
         diagnosticoService: diagnosticoService,
         resultadoDiagnosticoService: resultadoDiagnosticoService,
         catalogService: catalogService,
@@ -177,9 +201,38 @@ class _CaptacionState extends State<Captacion> {
     }
   }
 
+  void _onNextPressed() {
+    if (_currentCardIndex < 3) {
+      if (_currentCardIndex == 0) {
+        collectedData = _primeraTarjetaKey.currentState?.getData() ?? {};
+        print('Datos de PrimeraTarjeta: $collectedData');
+      } else if (_currentCardIndex == 1) {
+        final segundaData = _segundaTarjetaKey.currentState?.getData() ?? {};
+        collectedData.addAll(segundaData);
+        print('Datos de SegundaTarjeta: $segundaData');
+        print('Datos recopilados hasta ahora: $collectedData');
+      } else if (_currentCardIndex == 2) {
+        final terceraData = _terceraTarjetaKey.currentState?.getData() ?? {};
+        collectedData.addAll(terceraData);
+        print('Datos de TerceraTarjeta: $terceraData');
+        print('Datos recopilados hasta ahora: $collectedData');
+      }
+      _goToPage(_currentCardIndex + 1);
+    } else if (_currentCardIndex == 3) {
+      // Recopilar datos de la cuarta tarjeta
+      final cuartaData = _cuartaTarjetaKey.currentState?.getData() ?? {};
+      collectedData.addAll(cuartaData);
+      print('Datos de CuartaTarjeta: $cuartaData');
+      print('Datos recopilados hasta ahora: $collectedData');
+
+      // Aquí puedes implementar la lógica para enviar los datos al servidor o base de datos
+    }
+  }
+
   Widget _buildHeader() {
     return Column(
       children: [
+        // Fila con el botón de Centro de Salud y el ícono de perfil
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -191,11 +244,13 @@ class _CaptacionState extends State<Captacion> {
           ],
         ),
         const SizedBox(height: 20),
+        // Widget de Red de Servicio
         RedDeServicio(
           catalogService: catalogService,
           selectionStorageService: selectionStorageService,
         ),
         const SizedBox(height: 30),
+        // Contenedor con el nombre del evento de salud
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 10),
@@ -212,6 +267,7 @@ class _CaptacionState extends State<Captacion> {
           ),
         ),
         const SizedBox(height: 10),
+        // Fila con el ícono de persona y el nombre completo
         Row(
           children: [
             const Icon(Icons.person, color: Color(0xFF00C1D4)),
@@ -270,11 +326,7 @@ class _CaptacionState extends State<Captacion> {
           Expanded(
             child: PageView(
               controller: _pageController,
-              onPageChanged: (index) {
-                setState(() {
-                  _currentCardIndex = index;
-                });
-              },
+              physics: const NeverScrollableScrollPhysics(),
               children: [
                 _buildCard(_primeraTarjeta),
                 _buildCard(_segundaTarjeta),
@@ -283,6 +335,7 @@ class _CaptacionState extends State<Captacion> {
               ],
             ),
           ),
+          // Botones de navegación y puntos indicadores
           Padding(
             padding: const EdgeInsets.all(20.0),
             child: Row(
@@ -320,9 +373,7 @@ class _CaptacionState extends State<Captacion> {
                   ],
                 ),
                 ElevatedButton(
-                  onPressed: _currentCardIndex < 3
-                      ? () => _goToPage(_currentCardIndex + 1)
-                      : null,
+                  onPressed: _onNextPressed,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00C1D4),
                     shape: RoundedRectangleBorder(
