@@ -1,3 +1,5 @@
+// lib/screens/CaptacionResultadoBusqueda.dart
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert'; // Para codificar y decodificar JSON
@@ -23,6 +25,9 @@ class _CaptacionResultadoBusquedaState extends State<CaptacionResultadoBusqueda>
   List<Map<String, dynamic>> resultadosBusqueda = [];
   List<Map<String, dynamic>> resultadosFiltrados = []; // Lista para almacenar los resultados filtrados
 
+  // Lista para almacenar los IDs de las personas mostradas
+  List<int> personaIds = [];
+
   @override
   void initState() {
     super.initState();
@@ -43,6 +48,7 @@ class _CaptacionResultadoBusquedaState extends State<CaptacionResultadoBusqueda>
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String jsonResultados = jsonEncode(resultados); // Convertir la lista de mapas a JSON
     await prefs.setString('resultados_busqueda', jsonResultados); // Guardar el JSON en shared_preferences
+    print('Resultados de búsqueda guardados'); // Log para confirmar almacenamiento
   }
 
   // Cargar los resultados de shared_preferences
@@ -51,10 +57,17 @@ class _CaptacionResultadoBusquedaState extends State<CaptacionResultadoBusqueda>
     String? jsonResultados = prefs.getString('resultados_busqueda');
     
     if (jsonResultados != null) {
+      List<Map<String, dynamic>> resultados = List<Map<String, dynamic>>.from(jsonDecode(jsonResultados));
+      List<int> ids = resultados.map<int>((persona) => persona['id_persona'] as int).toList();
+
       setState(() {
-        resultadosBusqueda = List<Map<String, dynamic>>.from(jsonDecode(jsonResultados)); // Convertir de JSON a lista de mapas
+        resultadosBusqueda = resultados;
         resultadosFiltrados = resultadosBusqueda; // Inicialmente mostrar todos los resultados
+        personaIds = ids;
       });
+
+      // Imprimir los IDs en la terminal
+      print('IDs de las personas mostradas en CaptacionResultadoBusqueda: $personaIds');
     }
   }
 
@@ -88,15 +101,26 @@ class _CaptacionResultadoBusquedaState extends State<CaptacionResultadoBusqueda>
   @override
   Widget build(BuildContext context) {
     // Obtener los argumentos pasados desde la pantalla de búsqueda
-    final argumentos = ModalRoute.of(context)!.settings.arguments as List<Map<String, dynamic>>?;
+    final argumentos = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
 
-    // Si los argumentos no son nulos, asignar los resultados a la lista y guardarlos
-    if (argumentos != null && argumentos != resultadosBusqueda) {
-      setState(() {
-        resultadosBusqueda = argumentos;
-        resultadosFiltrados = List.from(argumentos); // Mostrar también los resultados filtrados
-      });
-      _saveResults(resultadosBusqueda); // Guardar los resultados localmente
+    if (argumentos != null) {
+      List<Map<String, dynamic>> resultados = List<Map<String, dynamic>>.from(argumentos['resultados'] ?? []);
+      List<int> personaIdsRecibidos = List<int>.from(argumentos['personaIds'] ?? []);
+
+      // Imprimir los IDs en la terminal
+      print('IDs recibidos en CaptacionResultadoBusqueda: $personaIdsRecibidos');
+
+      // Actualizar el estado si los resultados son nuevos
+      if (resultados != resultadosBusqueda) {
+        setState(() {
+          resultadosBusqueda = resultados;
+          resultadosFiltrados = List.from(resultadosBusqueda); // Mostrar también los resultados filtrados
+          personaIds = personaIdsRecibidos;
+        });
+
+        // Guardar los resultados localmente
+        _saveResults(resultadosBusqueda);
+      }
     }
 
     return Scaffold(
@@ -109,7 +133,7 @@ class _CaptacionResultadoBusquedaState extends State<CaptacionResultadoBusqueda>
           child: IconButton(
             icon: const Icon(Icons.arrow_back, color: Color(0xFF1877F2), size: 32),
             onPressed: () {
-              Navigator.pushNamed(context, '/captacion_busqueda_por_nombre');
+              Navigator.pushNamed(context, '/'); // Volver a la pantalla inicial
             },
           ),
         ),
@@ -148,9 +172,9 @@ class _CaptacionResultadoBusquedaState extends State<CaptacionResultadoBusqueda>
                   // Filtro por datos de la persona (Manteniendo el diseño y estilo original)
                   FiltroPersonaWidget(
                     hintText: 'Filtrar por datos de la persona',
-                    colorBorde: Color(0xFF00BCD4),
-                    colorIcono: Color(0xFF00BCD4),
-                    colorTexto: Color(0xFF4A4A4A),
+                    colorBorde: const Color(0xFF00BCD4),
+                    colorIcono: const Color(0xFF00BCD4),
+                    colorTexto: const Color(0xFF4A4A4A),
                     onChanged: _filtrarResultados, // Filtrar resultados dinámicamente
                   ),
                   const SizedBox(height: 20),
@@ -168,15 +192,23 @@ class _CaptacionResultadoBusquedaState extends State<CaptacionResultadoBusqueda>
                       return Column(
                         children: [
                           CardPersonaWidget(
-                            identificacion: persona['cedula'] ?? 'Sin cédula',
-                            expediente: persona['codigo_expediente'] ?? 'Sin expediente',
+                            identificacion: persona['cedula'] ?? 'Sin cédula', // Mostrar identificación
+                            expediente: persona['codigo_expediente'] ?? 'Sin expediente', // Mostrar expediente
                             nombre: nombreCompleto.isNotEmpty ? nombreCompleto : 'Sin nombre',
                             ubicacion: ubicacionCompleta,
                             colorBorde: const Color(0xFF00BCD4),
                             colorBoton: const Color(0xFF00BCD4),
                             textoBoton: 'SELECCIONAR',
-                            onBotonPressed: () {
-                              // Navegación a la pantalla de información del paciente, pasando todos los datos del paciente
+                            onBotonPressed: () async {
+                              // Extraer el id_persona
+                              int idPersona = persona['id_persona'];
+                              
+                              // Imprimir el id_persona en la terminal
+                              print('Persona seleccionada ID: $idPersona');
+                              
+                              // Almacenar el id_persona para uso interno
+                              
+                              // Navegar a la siguiente interfaz pasando los datos de la persona
                               Navigator.pushNamed(
                                 context,
                                 '/captacion_inf_paciente',

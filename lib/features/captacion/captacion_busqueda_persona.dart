@@ -28,6 +28,9 @@ class _CaptacionBusquedaPersonaState extends State<CaptacionBusquedaPersona> {
   // Controlador para el campo de texto de búsqueda
   TextEditingController busquedaController = TextEditingController();
 
+  // Lista para almacenar los IDs de las personas encontradas
+  List<int> personaIds = [];
+
   @override
   void initState() {
     super.initState();
@@ -71,7 +74,13 @@ class _CaptacionBusquedaPersonaState extends State<CaptacionBusquedaPersona> {
         setState(() {
           resultados = resultado; // Almacenar los resultados de la búsqueda
         });
-        print('Personas encontradas: $resultado');
+        print('Personas encontradas en CaptacionBusquedaPersona: $resultado');
+
+        // Extraer y almacenar los IDs (suponiendo que 'id_persona' es el campo de ID)
+        personaIds = resultado.map<int>((persona) => persona['id_persona'] as int).toList();
+
+        // Imprimir los IDs en la terminal
+        print('IDs de las personas encontradas en CaptacionBusquedaPersona: $personaIds');
 
         // Guardar la búsqueda en SharedPreferences solo al buscar
         await _saveBusqueda();
@@ -80,16 +89,19 @@ class _CaptacionBusquedaPersonaState extends State<CaptacionBusquedaPersona> {
         Navigator.pushNamed(
           context,
           '/captacion_resultado_busqueda',
-          arguments: resultados, // Pasar los resultados como lista de mapas
+          arguments: {
+            'resultados': resultados,
+            'personaIds': personaIds,
+          },
         );
       } else {
         // Manejar si no se encuentran personas
-        print('No se encontraron personas con los datos proporcionados');
+        print('No se encontraron personas con los datos proporcionados en CaptacionBusquedaPersona');
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('No se encontraron resultados.')));
       }
     } catch (e) {
-      print('Error al buscar personas: $e');
+      print('Error al buscar personas en CaptacionBusquedaPersona: $e');
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Error al buscar personas.')));
     }
@@ -179,7 +191,7 @@ class _CaptacionBusquedaPersonaState extends State<CaptacionBusquedaPersona> {
                                   color: Color(0xFF00BCD4), width: 2),
                             ),
                             color: seleccion == 'Recién Nacido'
-                                ? Color(0xFFEAF9FF)
+                                ? const Color(0xFFEAF9FF)
                                 : Colors.white,
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
@@ -219,7 +231,7 @@ class _CaptacionBusquedaPersonaState extends State<CaptacionBusquedaPersona> {
                                   color: Color(0xFF00BCD4), width: 2),
                             ),
                             color: seleccion == 'Desconocido'
-                                ? Color(0xFFEAF9FF)
+                                ? const Color(0xFFEAF9FF)
                                 : Colors.white,
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
@@ -304,11 +316,4 @@ class _CaptacionBusquedaPersonaState extends State<CaptacionBusquedaPersona> {
       ),
     );
   }
-}
-
-void main() {
-  runApp(const MaterialApp(
-    home: CaptacionBusquedaPersona(),
-    debugShowCheckedModeBanner: false,
-  ));
 }

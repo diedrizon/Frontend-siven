@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 import 'package:siven_app/core/services/catalogo_service_red_servicio.dart';
 import 'package:siven_app/core/services/selection_storage_service.dart';
 
@@ -45,9 +46,11 @@ class _SeleccionRedServicioTrabajadorWidgetState
       }
     } catch (e) {
       print('Error al cargar SILAIS: $e');
-      setState(() {
-        isLoadingSilais = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoadingSilais = false;
+        });
+      }
     }
   }
 
@@ -66,9 +69,11 @@ class _SeleccionRedServicioTrabajadorWidgetState
       }
     } catch (e) {
       print('Error al cargar Establecimientos: $e');
-      setState(() {
-        isLoadingEstablecimientos = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoadingEstablecimientos = false;
+        });
+      }
     }
   }
 
@@ -81,96 +86,163 @@ class _SeleccionRedServicioTrabajadorWidgetState
         children: [
           const Text(
             'Selecciona Red de Servicio',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.pink, // Título en color rosado
+            ),
           ),
           const SizedBox(height: 20),
 
           // Selección de SILAIS
-          isLoadingSilais
-              ? const CircularProgressIndicator()
-              : DropdownButtonFormField<String>(
-                  value: selectedSilaisId,
-                  decoration: InputDecoration(
-                    labelText: 'SILAIS',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0),
-                      borderSide: const BorderSide(color: Color(0xFF00C1D4)),
-                    ),
-                  ),
-                  items: silaisList.map((silais) {
-                    return DropdownMenuItem<String>(
-                      value: silais['id_silais'].toString(),
-                      child: Text(silais['nombre']),
-                    );
-                  }).toList(),
-                  onChanged: (val) async {
-                    setState(() {
-                      selectedSilaisId = val;
-                      selectedEstablecimientoId = null;
-                      establecimientosList.clear();
-                    });
-                    await _loadEstablecimientos(int.parse(val!));
-                  },
-                ),
+          dropdownSearchField(
+            label: 'SILAIS',
+            currentValue: selectedSilaisId,
+            items: silaisList,
+            isLoading: isLoadingSilais,
+            idKey: 'id_silais',
+            onChanged: (val) async {
+              setState(() {
+                selectedSilaisId = val;
+                selectedEstablecimientoId = null;
+                establecimientosList.clear();
+              });
+              if (val != null) {
+                print('SILAIS seleccionado ID: $val');
+                await _loadEstablecimientos(int.parse(val));
+              }
+            },
+          ),
           const SizedBox(height: 20),
 
           // Selección de Establecimiento
-          isLoadingEstablecimientos
-              ? const CircularProgressIndicator()
-              : DropdownButtonFormField<String>(
-                  value: selectedEstablecimientoId,
-                  decoration: InputDecoration(
-                    labelText: 'Establecimiento',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0),
-                      borderSide: const BorderSide(color: Color(0xFF00C1D4)),
-                    ),
-                  ),
-                  items: establecimientosList.map((establecimiento) {
-                    return DropdownMenuItem<String>(
-                      value: establecimiento['id_establecimiento'].toString(),
-                      child: Text(establecimiento['nombre']),
-                    );
-                  }).toList(),
-                  onChanged: (val) {
-                    setState(() {
-                      selectedEstablecimientoId = val;
-                    });
-                  },
-                ),
+          dropdownSearchField(
+            label: 'Establecimiento',
+            currentValue: selectedEstablecimientoId,
+            items: establecimientosList,
+            isLoading: isLoadingEstablecimientos,
+            idKey: 'id_establecimiento',
+            onChanged: (val) {
+              setState(() {
+                selectedEstablecimientoId = val;
+              });
+              if (val != null) {
+                print('Establecimiento seleccionado ID: $val');
+              }
+            },
+          ),
           const SizedBox(height: 20),
 
+          // Botón CONTINUAR
           ElevatedButton(
             onPressed: () async {
-              if (selectedSilaisId != null &&
-                  selectedEstablecimientoId != null) {
+              if (selectedSilaisId != null && selectedEstablecimientoId != null) {
                 final selectedData = {
                   'silais': silaisList
                       .firstWhere((silais) =>
-                          silais['id_silais'].toString() ==
-                          selectedSilaisId)['nombre']
+                          silais['id_silais'].toString() == selectedSilaisId)['nombre']
                       .toString(),
                   'establecimiento': establecimientosList
                       .firstWhere((establecimiento) =>
                           establecimiento['id_establecimiento'].toString() ==
                           selectedEstablecimientoId)['nombre']
                       .toString(),
+                  'silaisId': selectedSilaisId!,
+                  'establecimientoId': selectedEstablecimientoId!,
                 };
 
-                // Agregamos un retraso para evitar el error de navegación
+                print('Seleccionado SILAIS ID: ${selectedData['silaisId']}');
+                print('Seleccionado Establecimiento ID: ${selectedData['establecimientoId']}');
+
                 await Future.delayed(const Duration(milliseconds: 100));
                 if (mounted) {
                   Navigator.of(context).pop(selectedData);
                 }
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Por favor, selecciona SILAIS y Establecimiento'),
+                  ),
+                );
               }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF00C1D4),
+              foregroundColor: Colors.white, // Texto en blanco
             ),
             child: const Text('CONTINUAR'),
           ),
         ],
       ),
     );
+  }
+
+  Widget dropdownSearchField({
+    required String label,
+    required String? currentValue,
+    required List<Map<String, dynamic>> items,
+    required bool isLoading,
+    required String idKey,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return isLoading
+        ? const CircularProgressIndicator()
+        : DropdownSearch<Map<String, dynamic>>(
+            items: items,
+            popupProps: PopupProps.menu(
+              showSearchBox: true,
+              itemBuilder: (context, item, isSelected) {
+                return ListTile(
+                  title: Text(item['nombre']),
+                );
+              },
+              searchFieldProps: TextFieldProps(
+                decoration: InputDecoration(
+                  labelText: 'Buscar $label',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.0),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF00C1D4),
+                      width: 2.0,
+                    ),
+                  ),
+                ),
+              ),
+              emptyBuilder: (context, searchEntry) => Center(
+                child: Text('No hay coincidencias para $label'),
+              ),
+              constraints: const BoxConstraints(maxHeight: 400),
+            ),
+            dropdownDecoratorProps: DropDownDecoratorProps(
+              dropdownSearchDecoration: InputDecoration(
+                labelText: label,
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF00C1D4), // Bordes celeste siempre
+                    width: 2.0,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF00C1D4), // Bordes celeste al enfocar
+                    width: 2.0,
+                  ),
+                ),
+              ),
+            ),
+            itemAsString: (item) => item['nombre'],
+            selectedItem: currentValue != null
+                ? items.firstWhere(
+                    (item) => item[idKey].toString() == currentValue,
+                    orElse: () => {},
+                  )
+                : null,
+            onChanged: (Map<String, dynamic>? value) {
+              final selectedId = value != null ? value[idKey].toString() : null;
+              onChanged(selectedId);
+            },
+          );
   }
 }
