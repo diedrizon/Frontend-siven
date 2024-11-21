@@ -1,4 +1,7 @@
+// storage_service.dart
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:bcrypt/bcrypt.dart';
 
 class StorageService {
   final FlutterSecureStorage _secureStorage;
@@ -33,34 +36,40 @@ class StorageService {
     }
   }
 
-  // Guarda los roles del usuario
-  Future<void> saveRoles(List<String> roles) async {
+  // Guarda el nombre de usuario
+  Future<void> saveUser(String username) async {
     try {
-      await _secureStorage.write(key: 'user_roles', value: roles.join(','));
+      await _secureStorage.write(key: 'username', value: username);
     } catch (e) {
-      throw Exception('Error al guardar los roles: $e');
+      throw Exception('Error al guardar el usuario: $e');
     }
   }
 
-  // Recupera los roles almacenados
-  Future<List<String>?> getRoles() async {
+  // Recupera el nombre de usuario
+  Future<String?> getUser() async {
     try {
-      final rolesString = await _secureStorage.read(key: 'user_roles');
-      if (rolesString != null) {
-        return rolesString.split(','); // Convierte la cadena en una lista
-      }
-      return null;
+      return await _secureStorage.read(key: 'username');
     } catch (e) {
-      throw Exception('Error al recuperar los roles: $e');
+      throw Exception('Error al recuperar el usuario: $e');
     }
   }
 
-  // Elimina los roles
-  Future<void> deleteRoles() async {
+  // Guarda el hash de la contraseña utilizando bcrypt
+  Future<void> savePasswordHash(String password) async {
     try {
-      await _secureStorage.delete(key: 'user_roles');
+      final hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
+      await _secureStorage.write(key: 'password_hash', value: hashedPassword);
     } catch (e) {
-      throw Exception('Error al eliminar los roles: $e');
+      throw Exception('Error al guardar el hash de la contraseña: $e');
+    }
+  }
+
+  // Recupera el hash de la contraseña
+  Future<String?> getPasswordHash() async {
+    try {
+      return await _secureStorage.read(key: 'password_hash');
+    } catch (e) {
+      throw Exception('Error al recuperar el hash de la contraseña: $e');
     }
   }
 }
