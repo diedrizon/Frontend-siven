@@ -9,6 +9,7 @@ import 'package:siven_app/core/services/catalogo_service_red_servicio.dart';
 import 'package:siven_app/core/services/selection_storage_service.dart';
 import 'package:siven_app/widgets/seleccion_red_servicio_trabajador_widget.dart';
 import 'package:siven_app/widgets/TextField.dart'; // Asegúrate de que este path sea correcto
+import 'dart:async'; // Añadido
 
 /// Clase para representar opciones de Dropdown con ID y Nombre.
 class DropdownOption {
@@ -24,6 +25,7 @@ class CuartaTarjeta extends StatefulWidget {
   final ResultadoDiagnosticoService resultadoDiagnosticoService;
   final CatalogServiceRedServicio catalogService;
   final SelectionStorageService selectionStorageService;
+  final Future<void> Function() onGuardarPressed; // Cambiado
 
   const CuartaTarjeta({
     Key? key,
@@ -31,6 +33,7 @@ class CuartaTarjeta extends StatefulWidget {
     required this.resultadoDiagnosticoService,
     required this.catalogService,
     required this.selectionStorageService,
+    required this.onGuardarPressed, // Añadido
   }) : super(key: key);
 
   @override
@@ -110,6 +113,13 @@ class CuartaTarjetaState extends State<CuartaTarjeta> {
     };
   }
 
+  /// Método para actualizar el estado de guardado desde el widget padre
+  void setSavingState(bool isSaving) {
+    setState(() {
+      _isSaving = isSaving;
+    });
+  }
+
   /// Función para cargar diagnósticos desde el servicio
   Future<void> _cargarDiagnosticos() async {
     try {
@@ -184,25 +194,12 @@ class CuartaTarjetaState extends State<CuartaTarjeta> {
       _isSaving = true;
     });
 
-    // Aquí puedes implementar la lógica para guardar los datos en tu base de datos o servidor
-
-    // Simular un proceso de guardado
-    await Future.delayed(const Duration(seconds: 2));
+    // Llamar a la función pasada desde el widget padre
+    await widget.onGuardarPressed();
 
     setState(() {
       _isSaving = false;
     });
-
-    // Mostrar mensaje de éxito
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Se guardó exitosamente'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
   }
 
   /// Método auxiliar para construir campos desplegables usando CustomTextFieldDropdown

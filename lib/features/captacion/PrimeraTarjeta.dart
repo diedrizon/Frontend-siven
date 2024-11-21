@@ -28,9 +28,9 @@ class RangeTextInputFormatter extends TextInputFormatter {
   }
 }
 
-/// Clase para representar opciones de Dropdown con ID y Nombre.
-class DropdownOption {
-  final String id;
+/// Clase genérica para representar opciones de Dropdown con ID y Nombre.
+class DropdownOption<T> {
+  final T id;
   final String name;
 
   DropdownOption({required this.id, required this.name});
@@ -86,7 +86,7 @@ class PrimeraTarjetaState extends State<PrimeraTarjeta> {
   // Estados de carga y errores
   bool isLoadingMaternidad = true;
   String? errorMaternidad;
-  List<DropdownOption> opcionesMaternidad = [];
+  List<DropdownOption<String>> opcionesMaternidad = [];
 
   // Estados booleanos para condicionales
   bool _tieneComorbilidades = false;
@@ -94,25 +94,25 @@ class PrimeraTarjetaState extends State<PrimeraTarjeta> {
 
   // IDs seleccionados
   String? selectedMaternidadId;
-  String? selectedEsTrabajadorSaludId;
+  bool? selectedEsTrabajadorSaludId;
   String? selectedSILAISId;
   String? selectedEstablecimientoId;
   String? selectedComorbilidadId;
-  String? selectedTieneComorbilidadesId;
+  bool? selectedTieneComorbilidadesId;
 
-  // Opciones estáticas de Dropdown
-  final List<DropdownOption> opcionesTrabajadorSalud = [
-    DropdownOption(id: '1', name: 'Sí'),
-    DropdownOption(id: '0', name: 'No'),
+  // Opciones estáticas de Dropdown con valores booleanos
+  final List<DropdownOption<bool>> opcionesTrabajadorSalud = [
+    DropdownOption(id: true, name: 'Sí'),
+    DropdownOption(id: false, name: 'No'),
   ];
 
-  final List<DropdownOption> opcionesTieneComorbilidades = [
-    DropdownOption(id: '1', name: 'Sí'),
-    DropdownOption(id: '0', name: 'No'),
+  final List<DropdownOption<bool>> opcionesTieneComorbilidades = [
+    DropdownOption(id: true, name: 'Sí'),
+    DropdownOption(id: false, name: 'No'),
   ];
 
   // Opciones dinámicas de comorbilidades
-  List<DropdownOption> opcionesComorbilidad = [];
+  List<DropdownOption<String>> opcionesComorbilidad = [];
   bool isLoadingComorbilidades = true;
   String? errorComorbilidades;
 
@@ -124,9 +124,7 @@ class PrimeraTarjetaState extends State<PrimeraTarjeta> {
     fetchOpcionesMaternidad();
     fetchOpcionesComorbilidades(); // Cargar comorbilidades dinámicamente
 
-    tieneComorbilidadesController
-        .addListener(_actualizarTieneComorbilidades);
-    esTrabajadorSaludController.addListener(_actualizarEsTrabajadorSalud);
+    // No es necesario usar listeners para Dropdowns con valores booleanos
   }
 
   @override
@@ -134,12 +132,9 @@ class PrimeraTarjetaState extends State<PrimeraTarjeta> {
     // Dispose de los controladores
     maternidadController.dispose();
     semanasGestacionController.dispose();
-    esTrabajadorSaludController.removeListener(_actualizarEsTrabajadorSalud);
     esTrabajadorSaludController.dispose();
     silaisTrabajadorController.dispose();
     establecimientoTrabajadorController.dispose();
-    tieneComorbilidadesController
-        .removeListener(_actualizarTieneComorbilidades);
     tieneComorbilidadesController.dispose();
     comorbilidadesController.dispose();
     nombreJefeFamiliaController.dispose();
@@ -152,8 +147,8 @@ class PrimeraTarjetaState extends State<PrimeraTarjeta> {
     try {
       List<Map<String, dynamic>> maternidades =
           await widget.maternidadService.listarMaternidad();
-      List<DropdownOption> opciones = maternidades.map((m) {
-        return DropdownOption(
+      List<DropdownOption<String>> opciones = maternidades.map((m) {
+        return DropdownOption<String>(
           id: m['id_maternidad'].toString(),
           name: m['nombre'] as String,
         );
@@ -187,8 +182,8 @@ class PrimeraTarjetaState extends State<PrimeraTarjeta> {
     try {
       List<Map<String, dynamic>> comorbilidades =
           await widget.comorbilidadesService.listarComorbilidades();
-      List<DropdownOption> opciones = comorbilidades.map((c) {
-        return DropdownOption(
+      List<DropdownOption<String>> opciones = comorbilidades.map((c) {
+        return DropdownOption<String>(
           id: c['id_comorbilidades'].toString(),
           name: c['nombre'] as String,
         );
@@ -215,26 +210,6 @@ class PrimeraTarjetaState extends State<PrimeraTarjeta> {
 
       print('Error al cargar Comorbilidades: $errorComorbilidades');
     }
-  }
-
-  /// Actualiza el estado de si tiene comorbilidades.
-  void _actualizarTieneComorbilidades() {
-    setState(() {
-      _tieneComorbilidades = tieneComorbilidadesController.text == 'Sí';
-    });
-  }
-
-  /// Actualiza el estado de si es trabajador de salud.
-  void _actualizarEsTrabajadorSalud() {
-    setState(() {
-      _esTrabajadorSalud = esTrabajadorSaludController.text == 'Sí';
-      if (!_esTrabajadorSalud) {
-        silaisTrabajadorController.clear();
-        establecimientoTrabajadorController.clear();
-        selectedSILAISId = null;
-        selectedEstablecimientoId = null;
-      }
-    });
   }
 
   /// Abre el diálogo para seleccionar la red de servicio del trabajador.
@@ -270,12 +245,12 @@ class PrimeraTarjetaState extends State<PrimeraTarjeta> {
   }
 
   /// Método de ayuda para construir campos desplegables con etiquetas usando CustomTextFieldDropdown.
-  Widget _buildCustomDropdownField({
+  Widget _buildCustomDropdownField<T>({
     required String label,
-    required List<DropdownOption> options,
-    required String? selectedId,
+    required List<DropdownOption<T>> options,
+    required T? selectedId,
     required TextEditingController controller,
-    required Function(String?) onChanged,
+    required Function(T?) onChanged,
     required IconData icon,
     String hintText = 'Selecciona una opción',
   }) {
@@ -304,12 +279,10 @@ class PrimeraTarjetaState extends State<PrimeraTarjeta> {
             // Encontrar el ID correspondiente al nombre seleccionado
             final selectedOptionObj = options.firstWhere(
               (option) => option.name == selectedOption,
-              orElse: () => DropdownOption(id: '', name: ''),
+              orElse: () => DropdownOption<T>(id: null as T, name: ''),
             );
 
-            onChanged(selectedOptionObj.id.isNotEmpty
-                ? selectedOptionObj.id
-                : null);
+            onChanged(selectedOptionObj.id);
 
             print('Opción seleccionada para $label: ${selectedOptionObj.id}');
           },
@@ -400,34 +373,44 @@ class PrimeraTarjetaState extends State<PrimeraTarjeta> {
               const SizedBox(height: 20),
               _buildPersonaField(),
               const SizedBox(height: 20),
-              _buildCustomDropdownField(
-                label: 'Maternidad *',
-                options: opcionesMaternidad,
-                selectedId: selectedMaternidadId,
-                controller: maternidadController,
-                icon: Icons.home,
-                hintText: 'Selecciona una maternidad',
-                onChanged: (selectedId) {
-                  final selectedOption = opcionesMaternidad.firstWhere(
-                    (option) => option.id == selectedId,
-                    orElse: () => DropdownOption(id: '', name: ''),
-                  );
-                  setState(() {
-                    selectedMaternidadId =
-                        selectedOption.id.isNotEmpty ? selectedOption.id : null;
-                    maternidadController.text =
-                        selectedOption.name.isNotEmpty
-                            ? selectedOption.name
-                            : '';
-                  });
+              isLoadingMaternidad
+                  ? const CircularProgressIndicator()
+                  : errorMaternidad != null
+                      ? Text(
+                          'Error al cargar maternidad: $errorMaternidad',
+                          style: const TextStyle(color: Colors.red),
+                        )
+                      : _buildCustomDropdownField<String>(
+                          label: 'Maternidad *',
+                          options: opcionesMaternidad,
+                          selectedId: selectedMaternidadId,
+                          controller: maternidadController,
+                          icon: Icons.home,
+                          hintText: 'Selecciona una maternidad',
+                          onChanged: (selectedId) {
+                            final selectedOption = opcionesMaternidad.firstWhere(
+                              (option) => option.id == selectedId,
+                              orElse: () =>
+                                  DropdownOption<String>(id: '', name: ''),
+                            );
+                            setState(() {
+                              selectedMaternidadId =
+                                  selectedOption.id.isNotEmpty
+                                      ? selectedOption.id
+                                      : null;
+                              maternidadController.text =
+                                  selectedOption.name.isNotEmpty
+                                      ? selectedOption.name
+                                      : '';
+                            });
 
-                  print('ID seleccionado Maternidad: $selectedMaternidadId');
-                },
-              ),
+                            print('ID seleccionado Maternidad: $selectedMaternidadId');
+                          },
+                        ),
               const SizedBox(height: 20),
               _buildSemanasGestacionField(),
               const SizedBox(height: 20),
-              _buildCustomDropdownField(
+              _buildCustomDropdownField<bool>(
                 label: '¿Es Trabajador de la Salud? *',
                 options: opcionesTrabajadorSalud,
                 selectedId: selectedEsTrabajadorSaludId,
@@ -437,12 +420,13 @@ class PrimeraTarjetaState extends State<PrimeraTarjeta> {
                 onChanged: (selectedId) {
                   final selectedOption = opcionesTrabajadorSalud.firstWhere(
                     (option) => option.id == selectedId,
-                    orElse: () => DropdownOption(id: '0', name: 'No'),
+                    orElse: () =>
+                        DropdownOption<bool>(id: false, name: 'No'),
                   );
                   setState(() {
                     selectedEsTrabajadorSaludId = selectedOption.id;
                     esTrabajadorSaludController.text = selectedOption.name;
-                    _esTrabajadorSalud = selectedOption.id == '1';
+                    _esTrabajadorSalud = selectedOption.id;
                     if (!_esTrabajadorSalud) {
                       silaisTrabajadorController.clear();
                       establecimientoTrabajadorController.clear();
@@ -452,7 +436,7 @@ class PrimeraTarjetaState extends State<PrimeraTarjeta> {
                   });
 
                   print(
-                      'ID seleccionado ¿Es Trabajador de la Salud?: $selectedEsTrabajadorSaludId');
+                      '¿Es Trabajador de la Salud?: $selectedEsTrabajadorSaludId');
                 },
               ),
               const SizedBox(height: 20),
@@ -462,7 +446,7 @@ class PrimeraTarjetaState extends State<PrimeraTarjeta> {
                 _buildEstablecimientoField(),
                 const SizedBox(height: 20),
               ],
-              _buildCustomDropdownField(
+              _buildCustomDropdownField<bool>(
                 label: '¿Tiene Comorbilidades? *',
                 options: opcionesTieneComorbilidades,
                 selectedId: selectedTieneComorbilidadesId,
@@ -472,11 +456,12 @@ class PrimeraTarjetaState extends State<PrimeraTarjeta> {
                 onChanged: (selectedId) {
                   final selectedOption = opcionesTieneComorbilidades.firstWhere(
                     (option) => option.id == selectedId,
-                    orElse: () => DropdownOption(id: '0', name: 'No'),
+                    orElse: () =>
+                        DropdownOption<bool>(id: false, name: 'No'),
                   );
                   setState(() {
                     tieneComorbilidadesController.text = selectedOption.name;
-                    _tieneComorbilidades = selectedOption.id == '1';
+                    _tieneComorbilidades = selectedOption.id;
                     selectedTieneComorbilidadesId = selectedOption.id;
                     if (!_tieneComorbilidades) {
                       comorbilidadesController.clear();
@@ -485,7 +470,7 @@ class PrimeraTarjetaState extends State<PrimeraTarjeta> {
                   });
 
                   print(
-                      'ID seleccionado ¿Tiene Comorbilidades?: $selectedTieneComorbilidadesId');
+                      '¿Tiene Comorbilidades?: $selectedTieneComorbilidadesId');
                 },
               ),
               const SizedBox(height: 20),
@@ -497,7 +482,7 @@ class PrimeraTarjetaState extends State<PrimeraTarjeta> {
                             'Error al cargar comorbilidades: $errorComorbilidades',
                             style: const TextStyle(color: Colors.red),
                           )
-                        : _buildCustomDropdownField(
+                        : _buildCustomDropdownField<String>(
                             label: 'Comorbilidades *',
                             options: opcionesComorbilidad,
                             selectedId: selectedComorbilidadId,
@@ -505,12 +490,14 @@ class PrimeraTarjetaState extends State<PrimeraTarjeta> {
                             icon: Icons.medical_services,
                             hintText: 'Selecciona una comorbilidad',
                             onChanged: (selectedId) {
-                              if (selectedId == null) return;
+                              if (selectedId == null || selectedId.isEmpty)
+                                return;
                               final opcionComorbilidad = opcionesComorbilidad
                                   .firstWhere(
                                     (option) => option.id == selectedId,
                                     orElse: () =>
-                                        DropdownOption(id: '', name: ''),
+                                        DropdownOption<String>(
+                                            id: '', name: ''),
                                   );
                               setState(() {
                                 selectedComorbilidadId =

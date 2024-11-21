@@ -1,3 +1,5 @@
+// TerceraTarjeta.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Importar para inputFormatters
 import 'package:siven_app/core/services/PuestoNotificacionService.dart';
@@ -18,8 +20,7 @@ class TerceraTarjeta extends StatefulWidget {
 class TerceraTarjetaState extends State<TerceraTarjeta> {
   final TextEditingController puestoNotificacionController =
       TextEditingController();
-  final TextEditingController numeroClaveController =
-      TextEditingController(); // Renombrado
+  final TextEditingController numeroClaveController = TextEditingController();
   final TextEditingController numeroLaminaController = TextEditingController();
   final TextEditingController tomaMuestraController = TextEditingController();
   final TextEditingController tipoBusquedaController = TextEditingController();
@@ -27,10 +28,10 @@ class TerceraTarjetaState extends State<TerceraTarjeta> {
   List<Map<String, dynamic>> _puestosNotificacion = [];
   String? _selectedPuestoNotificacionId;
 
-  int? tipoBusquedaValue; // Variable para almacenar el valor de Tipo de Búsqueda
+  bool? tipoBusquedaValue; // Cambiado de int? a bool?
 
-  // Opciones para campos de preguntas binarias
-  final List<String> opcionesTipoBusqueda = ['Sí', 'No'];
+  // Opciones para el campo Tipo de Búsqueda
+  final List<String> opcionesTipoBusqueda = ['Activa', 'Pasiva'];
 
   @override
   void initState() {
@@ -42,7 +43,7 @@ class TerceraTarjetaState extends State<TerceraTarjeta> {
   void dispose() {
     // Dispose de los controladores
     puestoNotificacionController.dispose();
-    numeroClaveController.dispose(); // Actualizado
+    numeroClaveController.dispose();
     numeroLaminaController.dispose();
     tomaMuestraController.dispose();
     tipoBusquedaController.dispose();
@@ -51,8 +52,9 @@ class TerceraTarjetaState extends State<TerceraTarjeta> {
 
   Future<void> _fetchPuestosNotificacion() async {
     try {
+      // Cambiar al método correcto
       List<Map<String, dynamic>> puestos =
-          await widget.puestoNotificacionService.listarPuestosNotificacion();
+          await widget.puestoNotificacionService.listarPuestosNotificacionLocales();
       setState(() {
         _puestosNotificacion = puestos;
       });
@@ -68,7 +70,7 @@ class TerceraTarjetaState extends State<TerceraTarjeta> {
       'numeroClave': numeroClaveController.text,
       'numeroLamina': numeroLaminaController.text,
       'tomaMuestra': tomaMuestraController.text,
-      'tipoBusqueda': tipoBusquedaValue,
+      'tipoBusqueda': tipoBusquedaValue, // Ahora booleano
     };
   }
 
@@ -158,7 +160,7 @@ class TerceraTarjetaState extends State<TerceraTarjeta> {
               ),
               const SizedBox(height: 20),
 
-              // Campo: Tipo de Búsqueda (Sí/No)
+              // Campo: Tipo de Búsqueda (Activa/Pasiva)
               _buildDropdownField(
                 label: 'Tipo de Búsqueda *',
                 dropdown: CustomTextFieldDropdown(
@@ -170,10 +172,10 @@ class TerceraTarjetaState extends State<TerceraTarjeta> {
                   borderRadius: 8.0,
                   onChanged: (selectedOption) {
                     setState(() {
-                      if (selectedOption == 'Sí') {
-                        tipoBusquedaValue = 1;
-                      } else if (selectedOption == 'No') {
-                        tipoBusquedaValue = 0;
+                      if (selectedOption == 'Activa') {
+                        tipoBusquedaValue = true;
+                      } else if (selectedOption == 'Pasiva') {
+                        tipoBusquedaValue = false;
                       } else {
                         tipoBusquedaValue = null;
                       }

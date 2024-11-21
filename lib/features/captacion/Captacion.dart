@@ -1,3 +1,6 @@
+// Captacion.dart
+
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
@@ -16,6 +19,8 @@ import 'package:siven_app/core/services/PuestoNotificacionService.dart';
 import 'package:siven_app/core/services/DiagnosticoService.dart';
 import 'package:siven_app/core/services/ResultadoDiagnosticoService.dart';
 import 'package:siven_app/core/services/ComorbilidadesService.dart';
+import 'package:siven_app/core/services/CaptacionService.dart';
+import 'package:siven_app/core/services/storage_service.dart'; // Asegúrate de importar StorageService
 
 // Importaciones de widgets personalizados
 import 'package:siven_app/widgets/version.dart';
@@ -34,6 +39,7 @@ class Captacion extends StatefulWidget {
 
 class _CaptacionState extends State<Captacion> {
   final PageController _pageController = PageController(); // Controlador para PageView
+
   int _currentCardIndex = 0; // Índice de la tarjeta actual
   String? _selectedEventoName;
   String? nombreCompleto;
@@ -44,6 +50,7 @@ class _CaptacionState extends State<Captacion> {
   // Servicios
   late CatalogServiceRedServicio catalogService;
   late SelectionStorageService selectionStorageService;
+  late StorageService storageService; // Instancia de StorageService
   late EventoSaludService eventoSaludService;
   late MaternidadService maternidadService;
   late LugarCaptacionService lugarCaptacionService;
@@ -55,6 +62,7 @@ class _CaptacionState extends State<Captacion> {
   late DiagnosticoService diagnosticoService;
   late ResultadoDiagnosticoService resultadoDiagnosticoService;
   late ComorbilidadesService comorbilidadesService;
+  late CaptacionService captacionService; // Instancia de CaptacionService
 
   // Instancias de las tarjetas con GlobalKey
   late GlobalKey<PrimeraTarjetaState> _primeraTarjetaKey;
@@ -85,8 +93,11 @@ class _CaptacionState extends State<Captacion> {
     final httpClient = http.Client();
     final httpService = HttpService(httpClient: httpClient);
 
+    // Inicializar StorageService y SelectionStorageService por separado
+    storageService = StorageService(); // Instancia de StorageService
+    selectionStorageService = SelectionStorageService(); // Instancia de SelectionStorageService
+
     catalogService = CatalogServiceRedServicio(httpService: httpService);
-    selectionStorageService = SelectionStorageService();
     eventoSaludService = EventoSaludService(httpService: httpService);
     maternidadService = MaternidadService(httpService: httpService);
     lugarCaptacionService = LugarCaptacionService(httpService: httpService);
@@ -94,10 +105,22 @@ class _CaptacionState extends State<Captacion> {
     sitioExposicionService = SitioExposicionService(httpService: httpService);
     lugarIngresoPaisService = LugarIngresoPaisService(httpService: httpService);
     sintomasService = SintomasService(httpService: httpService);
-    puestoNotificacionService = PuestoNotificacionService(httpService: httpService);
+    
+    // Pasar storageService al constructor
+    puestoNotificacionService = PuestoNotificacionService(
+      httpService: httpService,
+      storageService: storageService,
+    );
+    
     diagnosticoService = DiagnosticoService(httpService: httpService);
     resultadoDiagnosticoService = ResultadoDiagnosticoService(httpService: httpService);
     comorbilidadesService = ComorbilidadesService(httpService: httpService);
+
+    // Pasar StorageService a CaptacionService
+    captacionService = CaptacionService(
+      httpService: httpService,
+      storageService: storageService,
+    );
   }
 
   @override
@@ -158,6 +181,7 @@ class _CaptacionState extends State<Captacion> {
         resultadoDiagnosticoService: resultadoDiagnosticoService,
         catalogService: catalogService,
         selectionStorageService: selectionStorageService,
+        onGuardarPressed: _onGuardarPressed, // Añadido
       );
 
       _cardsInitialized = true;
@@ -176,6 +200,7 @@ class _CaptacionState extends State<Captacion> {
     puestoNotificacionService.close();
     diagnosticoService.close();
     resultadoDiagnosticoService.close();
+    captacionService.close(); // Añadido
     super.dispose();
   }
 
@@ -205,28 +230,124 @@ class _CaptacionState extends State<Captacion> {
     if (_currentCardIndex < 3) {
       if (_currentCardIndex == 0) {
         collectedData = _primeraTarjetaKey.currentState?.getData() ?? {};
-        print('Datos de PrimeraTarjeta: $collectedData');
+        debugPrint('Datos de PrimeraTarjeta: $collectedData', wrapWidth: 1024);
       } else if (_currentCardIndex == 1) {
         final segundaData = _segundaTarjetaKey.currentState?.getData() ?? {};
         collectedData.addAll(segundaData);
-        print('Datos de SegundaTarjeta: $segundaData');
-        print('Datos recopilados hasta ahora: $collectedData');
+        debugPrint('Datos de SegundaTarjeta: $segundaData', wrapWidth: 1024);
+        debugPrint('Datos recopilados hasta ahora: $collectedData', wrapWidth: 1024);
       } else if (_currentCardIndex == 2) {
         final terceraData = _terceraTarjetaKey.currentState?.getData() ?? {};
         collectedData.addAll(terceraData);
-        print('Datos de TerceraTarjeta: $terceraData');
-        print('Datos recopilados hasta ahora: $collectedData');
+        debugPrint('Datos de TerceraTarjeta: $terceraData', wrapWidth: 1024);
+        debugPrint('Datos recopilados hasta ahora: $collectedData', wrapWidth: 1024);
       }
       _goToPage(_currentCardIndex + 1);
     } else if (_currentCardIndex == 3) {
-      // Recopilar datos de la cuarta tarjeta
-      final cuartaData = _cuartaTarjetaKey.currentState?.getData() ?? {};
-      collectedData.addAll(cuartaData);
-      print('Datos de CuartaTarjeta: $cuartaData');
-      print('Datos recopilados hasta ahora: $collectedData');
-
-      // Aquí puedes implementar la lógica para enviar los datos al servidor o base de datos
+      // En la cuarta tarjeta, no hacemos nada al presionar "Siguiente"
     }
+  }
+
+  // Función para manejar el guardado
+  Future<void> _onGuardarPressed() async {
+    // Recopilar datos de la CuartaTarjeta
+    final cuartaData = _cuartaTarjetaKey.currentState?.getData() ?? {};
+    collectedData.addAll(cuartaData);
+    debugPrint('Datos de CuartaTarjeta: $cuartaData', wrapWidth: 1024);
+    debugPrint('Datos recopilados hasta ahora: $collectedData', wrapWidth: 1024);
+
+    final dataToSave = _prepareDataForSaving(collectedData);
+
+    try {
+      // Mostrar indicador de carga
+      _cuartaTarjetaKey.currentState?.setSavingState(true);
+
+      await captacionService.crearCaptacion(dataToSave);
+
+      // Ocultar indicador de carga
+      _cuartaTarjetaKey.currentState?.setSavingState(false);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Captación guardada exitosamente'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      // Opcional: Navegar a otra pantalla o restablecer el formulario
+      // Navigator.pushNamed(context, '/captaciones_exitosas');
+    } catch (e) {
+      // Ocultar indicador de carga
+      _cuartaTarjetaKey.currentState?.setSavingState(false);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al guardar la captación: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Función para preparar los datos para guardarlos
+  Map<String, dynamic> _prepareDataForSaving(Map<String, dynamic> data) {
+    return {
+      'id_evento_salud': data['idEventoSalud'],
+      'id_persona': data['idPersona'],
+      'id_maternidad': data['selectedMaternidadId'],
+      'semana_gestacion': data['semanasGestacion'],
+      'trabajador_salud': data['esTrabajadorSalud'],
+      'id_silais_trabajador': data['selectedSILAISId'],
+      'id_establecimiento_trabajador': data['selectedEstablecimientoId'],
+      'tiene_comorbilidades': data['tieneComorbilidades'],
+      'id_comorbilidades': data['selectedComorbilidadId'],
+      'nombre_jefe_familia': data['nombreJefeFamilia'],
+      'telefono_referencia': data['telefonoReferencia'],
+      'id_lugar_captacion': data['selectedLugarCaptacionId'],
+      'id_condicion_persona': data['selectedCondicionPersonaId'],
+      'fecha_captacion': data['fechaCaptacion'],
+      'semana_epidemiologica': data['semanaEpidemiologica'],
+      'id_silais_captacion': data['selectedSILAISCaptacionId'],
+      'id_establecimiento_captacion': data['selectedEstablecimientoCaptacionId'],
+      'id_persona_captacion': data['personaCaptadaId'],
+      'id_sitio_exposicion': data['selectedSitioExposicionId'],
+      'latitud_ocurrencia': data['latitudOcurrencia'],
+      'longitud_ocurrencia': data['longitudOcurrencia'],
+      'presenta_sintomas': data['presentaSintomas'],
+      'fecha_inicio_sintomas': data['fechaInicioSintomas'],
+      'id_sintomas': data['selectedSintomaId'],
+      'fue_referido': data['fueReferido'],
+      'id_silais_traslado': data['selectedSILAISTrasladoId'],
+      'id_establecimiento_traslado': data['selectedEstablecimientoTrasladoId'],
+      'es_viajero': data['esViajero'],
+      'fecha_ingreso_pais': data['fechaIngresoPais'],
+      'id_lugar_ingreso_pais': data['selectedLugarIngresoPaisId'],
+      'direccion_ocurrencia': data['direccionOcurrencia'],
+      'observaciones_captacion': data['observacionesCaptacion'],
+      'id_puesto_notificacion': data['selectedPuestoNotificacionId'],
+      'no_clave': data['numeroClave'],
+      'no_lamina': data['numeroLamina'],
+      'toma_muestra': data['tomaMuestra'],
+      'tipobusqueda': data['tipoBusqueda'],
+      'id_diagnostico': data['selectedDiagnosticoId'],
+      'fecha_toma_muestra': data['fechaTomaMuestra'],
+      'fecha_recepcion_laboratorio': data['fechaRecepcionLab'],
+      'fecha_diagnostico': data['fechaDiagnostico'],
+      'id_resultado_diagnostico': data['selectedResultadoDiagnosticoId'],
+      'densidad_parasitaria_vivax_eas': data['densidadVivaxEAS'],
+      'densidad_parasitaria_vivax_ess': data['densidadVivaxESS'],
+      'densidad_parasitaria_falciparum_eas': data['densidadFalciparumEAS'],
+      'densidad_parasitaria_falciparum_ess': data['densidadFalciparumESS'],
+      'id_silais_diagnostico': data['selectedSILAISDiagnosticoId'],
+      'id_establecimiento_diagnostico': data['selectedEstablecimientoDiagnosticoId'],
+      'usuario_creacion': null, // Enviar null si no se llena
+      'fecha_creacion': null, // Enviar null si no se llena
+      'usuario_modificacion': null, // Enviar null si no se llena
+      'fecha_modificacion': null, // Enviar null si no se llena
+      'activo': null, // Enviar null si no se llena
+    };
   }
 
   Widget _buildHeader() {

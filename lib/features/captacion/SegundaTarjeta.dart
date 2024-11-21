@@ -38,9 +38,9 @@ class RangeTextInputFormatter extends TextInputFormatter {
   }
 }
 
-/// Clase para representar opciones de Dropdown con ID y Nombre.
-class DropdownOption {
-  final String id;
+/// Clase genérica para representar opciones de Dropdown con ID y Nombre.
+class DropdownOption<T> {
+  final T id;
   final String name;
 
   DropdownOption({required this.id, required this.name});
@@ -109,36 +109,36 @@ class SegundaTarjetaState extends State<SegundaTarjeta> {
       TextEditingController();
 
   // Variables de estado para manejar dinámicamente las selecciones
-  List<DropdownOption> lugaresCaptacion = [];
+  List<DropdownOption<String>> lugaresCaptacion = [];
   String? selectedLugarCaptacionId;
   bool isLoadingLugares = true;
   String? errorLugares;
 
-  List<DropdownOption> condicionesPersona = [];
+  List<DropdownOption<String>> condicionesPersona = [];
   String? selectedCondicionPersonaId;
   bool isLoadingCondiciones = true;
   String? errorCondiciones;
 
-  List<DropdownOption> sitiosExposicion = [];
+  List<DropdownOption<String>> sitiosExposicion = [];
   String? selectedSitioExposicionId;
   bool isLoadingSitios = true;
   String? errorSitios;
 
-  List<DropdownOption> lugaresIngresoPais = [];
+  List<DropdownOption<String>> lugaresIngresoPais = [];
   String? selectedLugarIngresoPaisId;
   bool isLoadingIngresoPais = true;
   String? errorIngresoPais;
 
   // Variables para Síntomas
-  List<DropdownOption> sintomas = [];
+  List<DropdownOption<String>> sintomas = [];
   String? selectedSintomaId;
   bool isLoadingSintomas = true;
   String? errorSintomas;
 
-  // Opciones para campos de preguntas binarias
-  final List<DropdownOption> yesNoOptions = [
-    DropdownOption(id: '1', name: 'Sí'),
-    DropdownOption(id: '0', name: 'No'),
+  // Opciones para campos de preguntas binarias usando booleanos
+  final List<DropdownOption<bool>> yesNoOptions = [
+    DropdownOption(id: true, name: 'Sí'),
+    DropdownOption(id: false, name: 'No'),
   ];
 
   bool _presentaSintomas = false;
@@ -165,10 +165,7 @@ class SegundaTarjetaState extends State<SegundaTarjeta> {
     fetchLugarIngresoPais();
     fetchSintomas();
 
-    // Listeners para actualizaciones dinámicas
-    presentaSintomasController.addListener(_actualizarPresentaSintomas);
-    fueReferidoController.addListener(_actualizarFueReferido);
-    esViajeroController.addListener(_actualizarEsViajero);
+    // No es necesario usar listeners para Dropdowns con valores booleanos
   }
 
   @override
@@ -183,15 +180,12 @@ class SegundaTarjetaState extends State<SegundaTarjeta> {
     sitioExposicionController.dispose();
     latitudOcurrenciaController.dispose();
     longitudOcurrenciaController.dispose();
-    presentaSintomasController.removeListener(_actualizarPresentaSintomas);
     presentaSintomasController.dispose();
     fechaInicioSintomasController.dispose();
     sintomasController.dispose();
-    fueReferidoController.removeListener(_actualizarFueReferido);
     fueReferidoController.dispose();
     silaisTrasladoController.dispose();
     establecimientoTrasladoController.dispose();
-    esViajeroController.removeListener(_actualizarEsViajero);
     esViajeroController.dispose();
     fechaIngresoPaisController.dispose();
     lugarIngresoPaisController.dispose();
@@ -200,24 +194,43 @@ class SegundaTarjetaState extends State<SegundaTarjeta> {
   }
 
   // Función para actualizar el estado según si presenta síntomas
-  void _actualizarPresentaSintomas() {
+  void _actualizarPresentaSintomas(bool? value) {
     setState(() {
-      _presentaSintomas = presentaSintomasController.text == 'Sí';
+      _presentaSintomas = value ?? false;
+      if (!_presentaSintomas) {
+        fechaInicioSintomasController.clear();
+        sintomasController.clear();
+        selectedSintomaId = null;
+      }
     });
+    print('¿Presenta Síntomas? seleccionado: $_presentaSintomas');
   }
 
   // Función para actualizar el estado según si fue referido
-  void _actualizarFueReferido() {
+  void _actualizarFueReferido(bool? value) {
     setState(() {
-      _fueReferido = fueReferidoController.text == 'Sí';
+      _fueReferido = value ?? false;
+      if (!_fueReferido) {
+        silaisTrasladoController.clear();
+        establecimientoTrasladoController.clear();
+        selectedSILAISTrasladoId = null;
+        selectedEstablecimientoTrasladoId = null;
+      }
     });
+    print('¿Fue Referido? seleccionado: $_fueReferido');
   }
 
   // Función para actualizar el estado según si es viajero
-  void _actualizarEsViajero() {
+  void _actualizarEsViajero(bool? value) {
     setState(() {
-      _esViajero = esViajeroController.text == 'Sí';
+      _esViajero = value ?? false;
+      if (!_esViajero) {
+        fechaIngresoPaisController.clear();
+        lugarIngresoPaisController.clear();
+        selectedLugarIngresoPaisId = null;
+      }
     });
+    print('¿Es Viajero? seleccionado: $_esViajero');
   }
 
   // Funciones para obtener datos de los servicios
@@ -225,8 +238,8 @@ class SegundaTarjetaState extends State<SegundaTarjeta> {
     try {
       List<Map<String, dynamic>> lugares =
           await widget.lugarCaptacionService.listarLugaresCaptacion();
-      List<DropdownOption> opciones = lugares.map((e) {
-        return DropdownOption(
+      List<DropdownOption<String>> opciones = lugares.map((e) {
+        return DropdownOption<String>(
           id: e['id_lugar_captacion'].toString(),
           name: e['nombre'] as String,
         );
@@ -259,8 +272,8 @@ class SegundaTarjetaState extends State<SegundaTarjeta> {
     try {
       List<Map<String, dynamic>> condiciones =
           await widget.condicionPersonaService.listarCondicionesPersona();
-      List<DropdownOption> opciones = condiciones.map((e) {
-        return DropdownOption(
+      List<DropdownOption<String>> opciones = condiciones.map((e) {
+        return DropdownOption<String>(
           id: e['id_condicion_persona'].toString(),
           name: e['nombre'] as String,
         );
@@ -293,8 +306,8 @@ class SegundaTarjetaState extends State<SegundaTarjeta> {
     try {
       List<Map<String, dynamic>> sitios =
           await widget.sitioExposicionService.listarSitiosExposicion();
-      List<DropdownOption> opciones = sitios.map((e) {
-        return DropdownOption(
+      List<DropdownOption<String>> opciones = sitios.map((e) {
+        return DropdownOption<String>(
           id: e['id_sitio_exposicion'].toString(),
           name: e['nombre'] as String,
         );
@@ -327,8 +340,8 @@ class SegundaTarjetaState extends State<SegundaTarjeta> {
     try {
       List<Map<String, dynamic>> lugares =
           await widget.lugarIngresoPaisService.listarLugarIngresoPais();
-      List<DropdownOption> opciones = lugares.map((e) {
-        return DropdownOption(
+      List<DropdownOption<String>> opciones = lugares.map((e) {
+        return DropdownOption<String>(
           id: e['id_lugar_ingreso_pais'].toString(),
           name: e['nombre'] as String,
         );
@@ -362,9 +375,9 @@ class SegundaTarjetaState extends State<SegundaTarjeta> {
     try {
       List<Map<String, dynamic>> fetchedSintomas =
           await widget.sintomasService.listarSintomas();
-      List<DropdownOption> opciones =
+      List<DropdownOption<String>> opciones =
           fetchedSintomas.where((sintoma) => sintoma['activo'] == 1).map((e) {
-        return DropdownOption(
+        return DropdownOption<String>(
           id: e['id_sintomas'].toString(),
           name: e['nombre'] as String,
         );
@@ -629,7 +642,7 @@ class SegundaTarjetaState extends State<SegundaTarjeta> {
         const SizedBox(height: 5),
         TextFormField(
           controller: controller,
-          readOnly: true, // Hacer de solo lectura
+          readOnly: readOnly, // Hacer de solo lectura
           decoration: InputDecoration(
             hintText: hintText,
             prefixIcon: prefixIcon != null
@@ -714,12 +727,12 @@ class SegundaTarjetaState extends State<SegundaTarjeta> {
   }
 
   /// Método auxiliar para construir campos desplegables usando CustomTextFieldDropdown
-  Widget _buildCustomDropdownField({
+  Widget _buildCustomDropdownField<T>({
     required String label,
-    required List<DropdownOption> options,
-    required String? selectedId,
+    required List<DropdownOption<T>> options,
+    required T? selectedId,
     required TextEditingController controller,
-    required Function(String?) onChanged,
+    required Function(T?) onChanged,
     required IconData icon,
     String hintText = 'Selecciona una opción',
   }) {
@@ -748,11 +761,13 @@ class SegundaTarjetaState extends State<SegundaTarjeta> {
             // Encontrar el ID correspondiente al nombre seleccionado
             final selectedOptionObj = options.firstWhere(
               (option) => option.name == selectedOption,
-              orElse: () => DropdownOption(id: '', name: ''),
+              orElse: () => DropdownOption<T>(
+                id: selectedId is bool ? false as T : '' as T,
+                name: 'Selecciona una opción',
+              ),
             );
 
-            onChanged(
-                selectedOptionObj.id.isNotEmpty ? selectedOptionObj.id : null);
+            onChanged(selectedOptionObj.id);
 
             print('Opción seleccionada para $label: ${selectedOptionObj.id}');
           },
@@ -819,6 +834,100 @@ class SegundaTarjetaState extends State<SegundaTarjeta> {
     return semana;
   }
 
+  /// Método auxiliar para construir campos de texto con ícono de búsqueda.
+  Widget buildSearchableTextField({
+    required String label,
+    required TextEditingController controller,
+    required String hintText,
+    required IconData prefixIcon,
+    required VoidCallback onSearch,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 16, color: Colors.black),
+        ),
+        const SizedBox(height: 5),
+        TextFormField(
+          controller: controller,
+          readOnly: true, // Evita modificaciones manuales
+          decoration: InputDecoration(
+            hintText: hintText,
+            prefixIcon: Icon(prefixIcon, color: const Color(0xFF00C1D4)),
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.search, color: Color(0xFF00C1D4)),
+              onPressed: onSearch,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
+            ),
+          ),
+          onTap: () {
+            // Opcional: Puedes implementar alguna acción al tocar el campo
+          },
+        ),
+      ],
+    );
+  }
+
+  /// Método auxiliar para construir campos desplegables usando CustomTextFieldDropdown
+  Widget _buildBooleanDropdownField({
+    required String label,
+    required List<DropdownOption<bool>> options,
+    required bool? selectedId,
+    required TextEditingController controller,
+    required Function(bool?) onChanged,
+    required IconData icon,
+    String hintText = 'Selecciona una opción',
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 16,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 5),
+        CustomTextFieldDropdown(
+          hintText: hintText,
+          controller: controller,
+          options: options.map((option) => option.name).toList(),
+          borderColor: const Color(0xFF00C1D4),
+          borderWidth: 1.0,
+          borderRadius: 8.0,
+          onChanged: (selectedOption) {
+            // Encontrar el ID correspondiente al nombre seleccionado
+            final selectedOptionObj = options.firstWhere(
+              (option) => option.name == selectedOption,
+              orElse: () => DropdownOption<bool>(
+                id: false,
+                name: 'No',
+              ),
+            );
+
+            onChanged(selectedOptionObj.id);
+
+            print('Opción seleccionada para $label: ${selectedOptionObj.id}');
+          },
+        ),
+      ],
+    );
+  }
+
   /// Método para obtener los datos ingresados.
   Map<String, dynamic> getData() {
     return {
@@ -829,16 +938,16 @@ class SegundaTarjetaState extends State<SegundaTarjeta> {
       'selectedSILAISCaptacionId': selectedSILAISCaptacionId,
       'selectedEstablecimientoCaptacionId': selectedEstablecimientoCaptacionId,
       'personaCaptadaId': _personaCaptadaId,
-      'fueReferido': fueReferidoController.text == 'Sí' ? 1 : 0,
+      'fueReferido': _fueReferido ? 1 : 0,
       'selectedSILAISTrasladoId': selectedSILAISTrasladoId,
       'selectedEstablecimientoTrasladoId': selectedEstablecimientoTrasladoId,
       'selectedSitioExposicionId': selectedSitioExposicionId,
       'latitudOcurrencia': latitudOcurrenciaController.text,
       'longitudOcurrencia': longitudOcurrenciaController.text,
-      'presentaSintomas': presentaSintomasController.text == 'Sí' ? 1 : 0,
+      'presentaSintomas': _presentaSintomas ? 1 : 0,
       'fechaInicioSintomas': fechaInicioSintomasController.text,
       'selectedSintomaId': selectedSintomaId,
-      'esViajero': esViajeroController.text == 'Sí' ? 1 : 0,
+      'esViajero': _esViajero ? 1 : 0,
       'fechaIngresoPais': fechaIngresoPaisController.text,
       'selectedLugarIngresoPaisId': selectedLugarIngresoPaisId,
       'observacionesCaptacion': observacionesCaptacionController.text,
@@ -866,7 +975,7 @@ class SegundaTarjetaState extends State<SegundaTarjeta> {
               const SizedBox(height: 20),
 
               // Campo: Lugar de Captación
-              _buildCustomDropdownField(
+              _buildCustomDropdownField<String>(
                 label: 'Lugar de Captación *',
                 options: lugaresCaptacion,
                 selectedId: selectedLugarCaptacionId,
@@ -878,7 +987,10 @@ class SegundaTarjetaState extends State<SegundaTarjeta> {
                     selectedLugarCaptacionId = selectedId;
                     lugarCaptacionController.text = lugaresCaptacion
                         .firstWhere((lugar) => lugar.id == selectedId,
-                            orElse: () => DropdownOption(id: '', name: ''))
+                            orElse: () => DropdownOption<String>(
+                                  id: '',
+                                  name: '',
+                                ))
                         .name;
                   });
                   print(
@@ -888,7 +1000,7 @@ class SegundaTarjetaState extends State<SegundaTarjeta> {
               const SizedBox(height: 20),
 
               // Campo: Condición de la Persona
-              _buildCustomDropdownField(
+              _buildCustomDropdownField<String>(
                 label: 'Condición de la Persona *',
                 options: condicionesPersona,
                 selectedId: selectedCondicionPersonaId,
@@ -900,7 +1012,10 @@ class SegundaTarjetaState extends State<SegundaTarjeta> {
                     selectedCondicionPersonaId = selectedId;
                     condicionPersonaController.text = condicionesPersona
                         .firstWhere((condicion) => condicion.id == selectedId,
-                            orElse: () => DropdownOption(id: '', name: ''))
+                            orElse: () => DropdownOption<String>(
+                                  id: '',
+                                  name: '',
+                                ))
                         .name;
                   });
                   print(
@@ -962,35 +1077,14 @@ class SegundaTarjetaState extends State<SegundaTarjeta> {
               const SizedBox(height: 20),
 
               // Campo: ¿Fue Referido?
-              _buildCustomDropdownField(
+              _buildBooleanDropdownField(
                 label: '¿Fue Referido? *',
                 options: yesNoOptions,
-                selectedId: fueReferidoController.text.isNotEmpty
-                    ? (fueReferidoController.text == 'Sí' ? '1' : '0')
-                    : null,
+                selectedId: _fueReferido,
                 controller: fueReferidoController,
                 icon: Icons.assignment_return,
                 hintText: 'Selecciona una opción',
-                onChanged: (selectedId) {
-                  setState(() {
-                    if (selectedId == '1') {
-                      fueReferidoController.text = 'Sí';
-                      _fueReferido = true;
-                    } else if (selectedId == '0') {
-                      fueReferidoController.text = 'No';
-                      _fueReferido = false;
-                      silaisTrasladoController.clear();
-                      establecimientoTrasladoController.clear();
-                      selectedSILAISTrasladoId = null;
-                      selectedEstablecimientoTrasladoId = null;
-                    } else {
-                      fueReferidoController.text = '';
-                      _fueReferido = false;
-                    }
-                  });
-                  print(
-                      '¿Fue Referido? seleccionado: ${fueReferidoController.text}');
-                },
+                onChanged: _actualizarFueReferido,
               ),
               const SizedBox(height: 20),
 
@@ -1020,7 +1114,7 @@ class SegundaTarjetaState extends State<SegundaTarjeta> {
               ],
 
               // Campo: Sitio de Exposición
-              _buildCustomDropdownField(
+              _buildCustomDropdownField<String>(
                 label: 'Sitio de Exposición *',
                 options: sitiosExposicion,
                 selectedId: selectedSitioExposicionId,
@@ -1032,7 +1126,10 @@ class SegundaTarjetaState extends State<SegundaTarjeta> {
                     selectedSitioExposicionId = selectedId;
                     sitioExposicionController.text = sitiosExposicion
                         .firstWhere((sitio) => sitio.id == selectedId,
-                            orElse: () => DropdownOption(id: '', name: ''))
+                            orElse: () => DropdownOption<String>(
+                                  id: '',
+                                  name: '',
+                                ))
                         .name;
                   });
                   print(
@@ -1075,34 +1172,14 @@ class SegundaTarjetaState extends State<SegundaTarjeta> {
               const SizedBox(height: 20),
 
               // Campo: ¿Presenta Síntomas?
-              _buildCustomDropdownField(
+              _buildBooleanDropdownField(
                 label: '¿Presenta Síntomas? *',
                 options: yesNoOptions,
-                selectedId: presentaSintomasController.text.isNotEmpty
-                    ? (presentaSintomasController.text == 'Sí' ? '1' : '0')
-                    : null,
+                selectedId: _presentaSintomas,
                 controller: presentaSintomasController,
                 icon: Icons.medical_services,
                 hintText: 'Selecciona una opción',
-                onChanged: (selectedId) {
-                  setState(() {
-                    if (selectedId == '1') {
-                      presentaSintomasController.text = 'Sí';
-                      _presentaSintomas = true;
-                    } else if (selectedId == '0') {
-                      presentaSintomasController.text = 'No';
-                      _presentaSintomas = false;
-                      fechaInicioSintomasController.clear();
-                      sintomasController.clear();
-                      selectedSintomaId = null;
-                    } else {
-                      presentaSintomasController.text = '';
-                      _presentaSintomas = false;
-                    }
-                  });
-                  print(
-                      '¿Presenta Síntomas? seleccionado: ${presentaSintomasController.text}');
-                },
+                onChanged: _actualizarPresentaSintomas,
               ),
               const SizedBox(height: 20),
 
@@ -1118,7 +1195,7 @@ class SegundaTarjetaState extends State<SegundaTarjeta> {
                 const SizedBox(height: 20),
 
                 // Campo: Síntomas
-                _buildCustomDropdownField(
+                _buildCustomDropdownField<String>(
                   label: 'Síntomas *',
                   options: sintomas,
                   selectedId: selectedSintomaId,
@@ -1130,7 +1207,10 @@ class SegundaTarjetaState extends State<SegundaTarjeta> {
                       selectedSintomaId = selectedId;
                       sintomasController.text = sintomas
                           .firstWhere((sintoma) => sintoma.id == selectedId,
-                              orElse: () => DropdownOption(id: '', name: ''))
+                              orElse: () => DropdownOption<String>(
+                                    id: '',
+                                    name: '',
+                                  ))
                           .name;
                     });
                     print('Síntoma seleccionado ID: $selectedSintomaId');
@@ -1140,34 +1220,14 @@ class SegundaTarjetaState extends State<SegundaTarjeta> {
               ],
 
               // Campo: ¿Es Viajero?
-              _buildCustomDropdownField(
+              _buildBooleanDropdownField(
                 label: '¿Es Viajero? *',
                 options: yesNoOptions,
-                selectedId: esViajeroController.text.isNotEmpty
-                    ? (esViajeroController.text == 'Sí' ? '1' : '0')
-                    : null,
+                selectedId: _esViajero,
                 controller: esViajeroController,
                 icon: Icons.airplanemode_active,
                 hintText: 'Selecciona una opción',
-                onChanged: (selectedId) {
-                  setState(() {
-                    if (selectedId == '1') {
-                      esViajeroController.text = 'Sí';
-                      _esViajero = true;
-                    } else if (selectedId == '0') {
-                      esViajeroController.text = 'No';
-                      _esViajero = false;
-                      fechaIngresoPaisController.clear();
-                      lugarIngresoPaisController.clear();
-                      selectedLugarIngresoPaisId = null;
-                    } else {
-                      esViajeroController.text = '';
-                      _esViajero = false;
-                    }
-                  });
-                  print(
-                      '¿Es Viajero? seleccionado: ${esViajeroController.text}');
-                },
+                onChanged: _actualizarEsViajero,
               ),
               const SizedBox(height: 20),
 
@@ -1183,7 +1243,7 @@ class SegundaTarjetaState extends State<SegundaTarjeta> {
                 const SizedBox(height: 20),
 
                 // Campo: Lugar de Ingreso al País
-                _buildCustomDropdownField(
+                _buildCustomDropdownField<String>(
                   label: 'Lugar de Ingreso al País *',
                   options: lugaresIngresoPais,
                   selectedId: selectedLugarIngresoPaisId,
@@ -1195,7 +1255,10 @@ class SegundaTarjetaState extends State<SegundaTarjeta> {
                       selectedLugarIngresoPaisId = selectedId;
                       lugarIngresoPaisController.text = lugaresIngresoPais
                           .firstWhere((lugar) => lugar.id == selectedId,
-                              orElse: () => DropdownOption(id: '', name: ''))
+                              orElse: () => DropdownOption<String>(
+                                    id: '',
+                                    name: '',
+                                  ))
                           .name;
                     });
                     print(
@@ -1249,53 +1312,6 @@ class SegundaTarjetaState extends State<SegundaTarjeta> {
             fontWeight: FontWeight.bold,
             color: Color(0xFF00C1D4),
           ),
-        ),
-      ],
-    );
-  }
-
-  /// Método auxiliar para construir campos de texto con ícono de búsqueda.
-  Widget buildSearchableTextField({
-    required String label,
-    required TextEditingController controller,
-    required String hintText,
-    required IconData prefixIcon,
-    required VoidCallback onSearch,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 16, color: Colors.black),
-        ),
-        const SizedBox(height: 5),
-        TextFormField(
-          controller: controller,
-          readOnly: true, // Evita modificaciones manuales
-          decoration: InputDecoration(
-            hintText: hintText,
-            prefixIcon: Icon(prefixIcon, color: const Color(0xFF00C1D4)),
-            suffixIcon: IconButton(
-              icon: const Icon(Icons.search, color: Color(0xFF00C1D4)),
-              onPressed: onSearch,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
-            ),
-          ),
-          onTap: () {
-            // Opcional: Puedes implementar alguna acción al tocar el campo
-          },
         ),
       ],
     );
