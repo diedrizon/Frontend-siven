@@ -1,6 +1,6 @@
 name: siven_app
 description: "A new Flutter project."
-publish_to: 'none' # Prevents accidental publication
+publish_to: "none" # Prevents accidental publication
 
 version: 1.0.0+1
 
@@ -10,7 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_secure_storage: ^7.0.1 
+  flutter_secure_storage: ^7.0.1
   http: ^0.13.5
   dropdown_search: ^5.0.3
   provider: ^6.0.0
@@ -32,8 +32,7 @@ dependencies:
   open_filex: ^3.2.1
   location: ^5.0.0
   url_launcher: ^6.1.10
-  
-
+  table_calendar: ^3.0.8
 
 dev_dependencies:
   flutter_test:
@@ -83,4 +82,3 @@ flutter:
     - lib/assets/GeoJson/Río_San_Juan.geojson
     - lib/assets/GeoJson/Rivas.geojson
     - lib/assets/GeoJson/ni.json
-
