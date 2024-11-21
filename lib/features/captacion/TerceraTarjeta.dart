@@ -28,7 +28,7 @@ class TerceraTarjetaState extends State<TerceraTarjeta> {
   List<Map<String, dynamic>> _puestosNotificacion = [];
   String? _selectedPuestoNotificacionId;
 
-  bool? tipoBusquedaValue; // Cambiado de int? a bool?
+  bool? tipoBusquedaValue;
 
   // Opciones para el campo Tipo de Búsqueda
   final List<String> opcionesTipoBusqueda = ['Activa', 'Pasiva'];
@@ -52,7 +52,6 @@ class TerceraTarjetaState extends State<TerceraTarjeta> {
 
   Future<void> _fetchPuestosNotificacion() async {
     try {
-      // Cambiar al método correcto
       List<Map<String, dynamic>> puestos =
           await widget.puestoNotificacionService.listarPuestosNotificacionLocales();
       setState(() {
@@ -65,6 +64,7 @@ class TerceraTarjetaState extends State<TerceraTarjeta> {
 
   /// Método para obtener los datos ingresados.
   Map<String, dynamic> getData() {
+    print('TipoBusquedaValue en getData(): $tipoBusquedaValue');
     return {
       'selectedPuestoNotificacionId': _selectedPuestoNotificacionId,
       'numeroClave': numeroClaveController.text,
@@ -72,6 +72,112 @@ class TerceraTarjetaState extends State<TerceraTarjeta> {
       'tomaMuestra': tomaMuestraController.text,
       'tipoBusqueda': tipoBusquedaValue, // Ahora booleano
     };
+  }
+
+  /// Método de validación que retorna una lista de campos con errores.
+  List<String> validate() {
+    List<String> errors = [];
+
+    // Validar Puesto de Notificación
+    if (_selectedPuestoNotificacionId == null ||
+        _selectedPuestoNotificacionId!.isEmpty) {
+      errors.add('Puesto de Notificación');
+    }
+
+    // Validar Número de Clave
+    if (numeroClaveController.text.isEmpty) {
+      errors.add('Número de Clave');
+    }
+
+    // Validar Número de Lámina
+    if (numeroLaminaController.text.isEmpty) {
+      errors.add('Número de Lámina');
+    } else {
+      // Asegurarse de que sea solo dígitos
+      if (!RegExp(r'^\d+$').hasMatch(numeroLaminaController.text)) {
+        errors.add('Número de Lámina debe contener solo dígitos');
+      }
+    }
+
+    // Validar Toma de Muestra
+    if (tomaMuestraController.text.isEmpty) {
+      errors.add('Toma de Muestra');
+    } else {
+      // Asegurarse de que sea solo dígitos
+      if (!RegExp(r'^\d+$').hasMatch(tomaMuestraController.text)) {
+        errors.add('Toma de Muestra debe contener solo dígitos');
+      }
+    }
+
+    // Validar Tipo de Búsqueda
+    if (tipoBusquedaValue == null) {
+      errors.add('Tipo de Búsqueda');
+    }
+
+    return errors;
+  }
+
+  // Método para construir campos de texto con un formato estándar
+  Widget _buildTextField({
+    required String label,
+    required TextEditingController controller,
+    required String hintText,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 16, color: Colors.black),
+        ),
+        const SizedBox(height: 5),
+        TextFormField(
+          controller: controller,
+          keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
+          decoration: InputDecoration(
+            hintText: hintText,
+            prefixIcon: Icon(icon, color: const Color(0xFF00C1D4)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Método para construir campos desplegables con etiquetas
+  Widget _buildDropdownField({
+    required String label,
+    required CustomTextFieldDropdown dropdown,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 16,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 5),
+        dropdown,
+      ],
+    );
   }
 
   @override
@@ -179,6 +285,7 @@ class TerceraTarjetaState extends State<TerceraTarjeta> {
                       } else {
                         tipoBusquedaValue = null;
                       }
+                      print('TipoBusquedaValue: $tipoBusquedaValue');
                     });
                   },
                 ),
@@ -187,69 +294,6 @@ class TerceraTarjetaState extends State<TerceraTarjeta> {
           ),
         ),
       ),
-    );
-  }
-
-  // Método para construir campos de texto con un formato estándar
-  Widget _buildTextField({
-    required String label,
-    required TextEditingController controller,
-    required String hintText,
-    required IconData icon,
-    TextInputType keyboardType = TextInputType.text,
-    List<TextInputFormatter>? inputFormatters,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 16, color: Colors.black),
-        ),
-        const SizedBox(height: 5),
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          inputFormatters: inputFormatters,
-          decoration: InputDecoration(
-            hintText: hintText,
-            prefixIcon: Icon(icon, color: const Color(0xFF00C1D4)),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF00C1D4)),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // Método para construir campos desplegables con etiquetas
-  Widget _buildDropdownField({
-    required String label,
-    required CustomTextFieldDropdown dropdown,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 16,
-            color: Colors.black,
-          ),
-        ),
-        const SizedBox(height: 5),
-        dropdown,
-      ],
     );
   }
 

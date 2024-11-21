@@ -1,3 +1,5 @@
+// PrimeraTarjeta.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:siven_app/core/services/catalogo_service_red_servicio.dart';
@@ -6,6 +8,57 @@ import 'package:siven_app/core/services/Maternidadservice.dart';
 import 'package:siven_app/core/services/ComorbilidadesService.dart'; // Asegúrate de importar el servicio
 import 'package:siven_app/widgets/seleccion_red_servicio_trabajador_widget.dart';
 import 'package:siven_app/widgets/TextField.dart';
+
+/// TextInputFormatter para permitir solo letras y espacios.
+class LettersOnlyTextInputFormatter extends TextInputFormatter {
+  final RegExp _regExp = RegExp(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$');
+
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    if (_regExp.hasMatch(newValue.text) || newValue.text.isEmpty) {
+      return newValue;
+    }
+    return oldValue;
+  }
+}
+
+/// TextInputFormatter para el teléfono de referencia.
+class PhoneNumberFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    var text = newValue.text;
+
+    // Remover todos los caracteres excepto dígitos y '+'
+    text = '+' + text.replaceAll(RegExp(r'[^\d]'), '');
+
+    // Asegurarse de que empiece con '+'
+    if (!text.startsWith('+')) {
+      text = '+' + text;
+    }
+
+    // Insertar espacio después del código de país (3 dígitos)
+    if (text.length > 4 && text[4] != ' ') {
+      text = text.substring(0, 4) + ' ' + text.substring(4);
+    }
+
+    // Insertar guion después de los siguientes 4 dígitos
+    if (text.length > 9 && text[9] != '-') {
+      text = text.substring(0, 9) + '-' + text.substring(9);
+    }
+
+    // Limitar a 14 caracteres: +XXX XXXX-XXXX
+    if (text.length > 14) {
+      text = text.substring(0, 14);
+    }
+
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+}
 
 /// Formateador para limitar la entrada numérica a un rango específico.
 class RangeTextInputFormatter extends TextInputFormatter {
@@ -352,6 +405,65 @@ class PrimeraTarjetaState extends State<PrimeraTarjeta> {
     };
   }
 
+  /// Valida los campos y devuelve una lista de mensajes de error si hay alguno.
+  List<String> validate() {
+    List<String> errors = [];
+
+    // Validar campos requeridos
+    if (selectedMaternidadId == null || selectedMaternidadId!.isEmpty) {
+      errors.add('Maternidad');
+    }
+
+    if (semanasGestacionController.text.isEmpty) {
+      errors.add('Semanas de Gestación');
+    }
+
+    if (selectedEsTrabajadorSaludId == null) {
+      errors.add('¿Es Trabajador de la Salud?');
+    } else if (selectedEsTrabajadorSaludId == true) {
+      if (selectedSILAISId == null || selectedSILAISId!.isEmpty) {
+        errors.add('SILAIS del Trabajador');
+      }
+      if (selectedEstablecimientoId == null ||
+          selectedEstablecimientoId!.isEmpty) {
+        errors.add('Establecimiento del Trabajador');
+      }
+    }
+
+    if (selectedTieneComorbilidadesId == null) {
+      errors.add('¿Tiene Comorbilidades?');
+    } else if (selectedTieneComorbilidadesId == true) {
+      if (selectedComorbilidadId == null || selectedComorbilidadId!.isEmpty) {
+        errors.add('Comorbilidades');
+      }
+    }
+
+    if (nombreJefeFamiliaController.text.isEmpty) {
+      errors.add('Nombre del Jefe de Familia');
+    } else {
+      // Validar que solo contiene letras
+      final nombre = nombreJefeFamiliaController.text;
+      final nombreRegExp = RegExp(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$');
+      if (!nombreRegExp.hasMatch(nombre)) {
+        errors.add('Nombre del Jefe de Familia solo debe contener letras');
+      }
+    }
+
+    if (telefonoReferenciaController.text.isEmpty) {
+      errors.add('Teléfono de Referencia');
+    } else {
+      // Validar patrón de teléfono
+      final telefono = telefonoReferenciaController.text;
+      final telefonoRegExp = RegExp(r'^\+\d{3} \d{4}-\d{4}$');
+      if (!telefonoRegExp.hasMatch(telefono)) {
+        errors.add(
+            'Teléfono de Referencia debe seguir el formato +XXX XXXX-XXXX');
+      }
+    }
+
+    return errors;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -388,23 +500,24 @@ class PrimeraTarjetaState extends State<PrimeraTarjeta> {
                           icon: Icons.home,
                           hintText: 'Selecciona una maternidad',
                           onChanged: (selectedId) {
-                            final selectedOption = opcionesMaternidad.firstWhere(
+                            final selectedOption =
+                                opcionesMaternidad.firstWhere(
                               (option) => option.id == selectedId,
                               orElse: () =>
                                   DropdownOption<String>(id: '', name: ''),
                             );
                             setState(() {
-                              selectedMaternidadId =
-                                  selectedOption.id.isNotEmpty
-                                      ? selectedOption.id
-                                      : null;
+                              selectedMaternidadId = selectedOption.id.isNotEmpty
+                                  ? selectedOption.id
+                                  : null;
                               maternidadController.text =
                                   selectedOption.name.isNotEmpty
                                       ? selectedOption.name
                                       : '';
                             });
 
-                            print('ID seleccionado Maternidad: $selectedMaternidadId');
+                            print(
+                                'ID seleccionado Maternidad: $selectedMaternidadId');
                           },
                         ),
               const SizedBox(height: 20),
@@ -454,13 +567,15 @@ class PrimeraTarjetaState extends State<PrimeraTarjeta> {
                 icon: Icons.health_and_safety_outlined,
                 hintText: 'Selecciona una opción',
                 onChanged: (selectedId) {
-                  final selectedOption = opcionesTieneComorbilidades.firstWhere(
+                  final selectedOption =
+                      opcionesTieneComorbilidades.firstWhere(
                     (option) => option.id == selectedId,
                     orElse: () =>
                         DropdownOption<bool>(id: false, name: 'No'),
                   );
                   setState(() {
-                    tieneComorbilidadesController.text = selectedOption.name;
+                    tieneComorbilidadesController.text =
+                        selectedOption.name;
                     _tieneComorbilidades = selectedOption.id;
                     selectedTieneComorbilidadesId = selectedOption.id;
                     if (!_tieneComorbilidades) {
@@ -469,8 +584,7 @@ class PrimeraTarjetaState extends State<PrimeraTarjeta> {
                     }
                   });
 
-                  print(
-                      '¿Tiene Comorbilidades?: $selectedTieneComorbilidadesId');
+                  print('¿Tiene Comorbilidades?: $selectedTieneComorbilidadesId');
                 },
               ),
               const SizedBox(height: 20),
@@ -492,13 +606,12 @@ class PrimeraTarjetaState extends State<PrimeraTarjeta> {
                             onChanged: (selectedId) {
                               if (selectedId == null || selectedId.isEmpty)
                                 return;
-                              final opcionComorbilidad = opcionesComorbilidad
-                                  .firstWhere(
-                                    (option) => option.id == selectedId,
-                                    orElse: () =>
-                                        DropdownOption<String>(
-                                            id: '', name: ''),
-                                  );
+                              final opcionComorbilidad =
+                                  opcionesComorbilidad.firstWhere(
+                                (option) => option.id == selectedId,
+                                orElse: () =>
+                                    DropdownOption<String>(id: '', name: ''),
+                              );
                               setState(() {
                                 selectedComorbilidadId =
                                     opcionComorbilidad.id.isNotEmpty
@@ -651,6 +764,10 @@ class PrimeraTarjetaState extends State<PrimeraTarjeta> {
       controller: nombreJefeFamiliaController,
       hintText: 'Ingresa el nombre completo',
       icon: Icons.person,
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]')),
+        LettersOnlyTextInputFormatter(),
+      ],
     );
   }
 
@@ -659,9 +776,13 @@ class PrimeraTarjetaState extends State<PrimeraTarjeta> {
     return _buildTextField(
       label: 'Teléfono de Referencia *',
       controller: telefonoReferenciaController,
-      hintText: 'Ingresa el teléfono de referencia',
+      hintText: '+505 0000-0000',
       icon: Icons.phone,
       keyboardType: TextInputType.phone,
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'[+\d\s-]')),
+        PhoneNumberFormatter(),
+      ],
     );
   }
 
