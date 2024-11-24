@@ -1,10 +1,64 @@
+// PrimeraTarjeta.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:siven_app/core/services/catalogo_service_red_servicio.dart';
 import 'package:siven_app/core/services/selection_storage_service.dart';
 import 'package:siven_app/core/services/Maternidadservice.dart';
+import 'package:siven_app/core/services/ComorbilidadesService.dart'; // Asegúrate de importar el servicio
 import 'package:siven_app/widgets/seleccion_red_servicio_trabajador_widget.dart';
 import 'package:siven_app/widgets/TextField.dart';
+
+/// TextInputFormatter para permitir solo letras y espacios.
+class LettersOnlyTextInputFormatter extends TextInputFormatter {
+  final RegExp _regExp = RegExp(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$');
+
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    if (_regExp.hasMatch(newValue.text) || newValue.text.isEmpty) {
+      return newValue;
+    }
+    return oldValue;
+  }
+}
+
+/// TextInputFormatter para el teléfono de referencia.
+class PhoneNumberFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    var text = newValue.text;
+
+    // Remover todos los caracteres excepto dígitos y '+'
+    text = '+' + text.replaceAll(RegExp(r'[^\d]'), '');
+
+    // Asegurarse de que empiece con '+'
+    if (!text.startsWith('+')) {
+      text = '+' + text;
+    }
+
+    // Insertar espacio después del código de país (3 dígitos)
+    if (text.length > 4 && text[4] != ' ') {
+      text = text.substring(0, 4) + ' ' + text.substring(4);
+    }
+
+    // Insertar guion después de los siguientes 4 dígitos
+    if (text.length > 9 && text[9] != '-') {
+      text = text.substring(0, 9) + '-' + text.substring(9);
+    }
+
+    // Limitar a 14 caracteres: +XXX XXXX-XXXX
+    if (text.length > 14) {
+      text = text.substring(0, 14);
+    }
+
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+}
 
 /// Formateador para limitar la entrada numérica a un rango específico.
 class RangeTextInputFormatter extends TextInputFormatter {
@@ -27,9 +81,9 @@ class RangeTextInputFormatter extends TextInputFormatter {
   }
 }
 
-/// Clase para representar opciones de Dropdown con ID y Nombre.
-class DropdownOption {
-  final String id;
+/// Clase genérica para representar opciones de Dropdown con ID y Nombre.
+class DropdownOption<T> {
+  final T id;
   final String name;
 
   DropdownOption({required this.id, required this.name});
@@ -41,6 +95,7 @@ class PrimeraTarjeta extends StatefulWidget {
   final CatalogServiceRedServicio catalogService;
   final SelectionStorageService selectionStorageService;
   final MaternidadService maternidadService;
+  final ComorbilidadesService comorbilidadesService; // Añade el servicio
   final String? idEventoSalud; // ID del evento de salud
   final int? idPersona; // ID de la persona
 
@@ -51,15 +106,17 @@ class PrimeraTarjeta extends StatefulWidget {
     required this.catalogService,
     required this.selectionStorageService,
     required this.maternidadService,
+    required this.comorbilidadesService, // Inicializa el servicio
     this.idEventoSalud,
     this.idPersona,
   }) : super(key: key);
 
   @override
-  _PrimeraTarjetaState createState() => _PrimeraTarjetaState();
+  PrimeraTarjetaState createState() => PrimeraTarjetaState();
 }
 
-class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
+// Cambiado el nombre de la clase de estado para que sea pública
+class PrimeraTarjetaState extends State<PrimeraTarjeta> {
   // Controladores de texto
   final TextEditingController maternidadController = TextEditingController();
   final TextEditingController semanasGestacionController =
@@ -82,7 +139,7 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
   // Estados de carga y errores
   bool isLoadingMaternidad = true;
   String? errorMaternidad;
-  List<DropdownOption> opcionesMaternidad = [];
+  List<DropdownOption<String>> opcionesMaternidad = [];
 
   // Estados booleanos para condicionales
   bool _tieneComorbilidades = false;
@@ -90,29 +147,27 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
 
   // IDs seleccionados
   String? selectedMaternidadId;
-  String? selectedEsTrabajadorSaludId;
+  bool? selectedEsTrabajadorSaludId;
   String? selectedSILAISId;
   String? selectedEstablecimientoId;
   String? selectedComorbilidadId;
-  String? selectedTieneComorbilidadesId;
+  bool? selectedTieneComorbilidadesId;
 
-  // Opciones estáticas de Dropdown
-  final List<DropdownOption> opcionesTrabajadorSalud = [
-    DropdownOption(id: '1', name: 'Sí'),
-    DropdownOption(id: '0', name: 'No'),
+  // Opciones estáticas de Dropdown con valores booleanos
+  final List<DropdownOption<bool>> opcionesTrabajadorSalud = [
+    DropdownOption(id: true, name: 'Sí'),
+    DropdownOption(id: false, name: 'No'),
   ];
 
-  final List<DropdownOption> opcionesTieneComorbilidades = [
-    DropdownOption(id: '1', name: 'Sí'),
-    DropdownOption(id: '0', name: 'No'),
+  final List<DropdownOption<bool>> opcionesTieneComorbilidades = [
+    DropdownOption(id: true, name: 'Sí'),
+    DropdownOption(id: false, name: 'No'),
   ];
 
-  final List<DropdownOption> opcionesComorbilidad = [
-    DropdownOption(id: '1', name: 'Diabetes'),
-    DropdownOption(id: '2', name: 'Hipertensión'),
-    DropdownOption(id: '3', name: 'Enfermedad Pulmonar'),
-    DropdownOption(id: '4', name: 'Otra'),
-  ];
+  // Opciones dinámicas de comorbilidades
+  List<DropdownOption<String>> opcionesComorbilidad = [];
+  bool isLoadingComorbilidades = true;
+  String? errorComorbilidades;
 
   @override
   void initState() {
@@ -120,10 +175,9 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
     print(
         'PrimeraTarjeta - ID de persona: ${widget.idPersona}, ID de evento de salud: ${widget.idEventoSalud}');
     fetchOpcionesMaternidad();
+    fetchOpcionesComorbilidades(); // Cargar comorbilidades dinámicamente
 
-    tieneComorbilidadesController
-        .addListener(_actualizarTieneComorbilidades);
-    esTrabajadorSaludController.addListener(_actualizarEsTrabajadorSalud);
+    // No es necesario usar listeners para Dropdowns con valores booleanos
   }
 
   @override
@@ -131,12 +185,9 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
     // Dispose de los controladores
     maternidadController.dispose();
     semanasGestacionController.dispose();
-    esTrabajadorSaludController.removeListener(_actualizarEsTrabajadorSalud);
     esTrabajadorSaludController.dispose();
     silaisTrabajadorController.dispose();
     establecimientoTrabajadorController.dispose();
-    tieneComorbilidadesController
-        .removeListener(_actualizarTieneComorbilidades);
     tieneComorbilidadesController.dispose();
     comorbilidadesController.dispose();
     nombreJefeFamiliaController.dispose();
@@ -149,8 +200,8 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
     try {
       List<Map<String, dynamic>> maternidades =
           await widget.maternidadService.listarMaternidad();
-      List<DropdownOption> opciones = maternidades.map((m) {
-        return DropdownOption(
+      List<DropdownOption<String>> opciones = maternidades.map((m) {
+        return DropdownOption<String>(
           id: m['id_maternidad'].toString(),
           name: m['nombre'] as String,
         );
@@ -179,24 +230,39 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
     }
   }
 
-  /// Actualiza el estado de si tiene comorbilidades.
-  void _actualizarTieneComorbilidades() {
-    setState(() {
-      _tieneComorbilidades = tieneComorbilidadesController.text == 'Sí';
-    });
-  }
+  /// Fetch y asigna las opciones de comorbilidades dinámicamente.
+  Future<void> fetchOpcionesComorbilidades() async {
+    try {
+      List<Map<String, dynamic>> comorbilidades =
+          await widget.comorbilidadesService.listarComorbilidades();
+      List<DropdownOption<String>> opciones = comorbilidades.map((c) {
+        return DropdownOption<String>(
+          id: c['id_comorbilidades'].toString(),
+          name: c['nombre'] as String,
+        );
+      }).toList();
 
-  /// Actualiza el estado de si es trabajador de salud.
-  void _actualizarEsTrabajadorSalud() {
-    setState(() {
-      _esTrabajadorSalud = esTrabajadorSaludController.text == 'Sí';
-      if (!_esTrabajadorSalud) {
-        silaisTrabajadorController.clear();
-        establecimientoTrabajadorController.clear();
-        selectedSILAISId = null;
-        selectedEstablecimientoId = null;
-      }
-    });
+      if (!mounted) return;
+
+      setState(() {
+        opcionesComorbilidad = opciones;
+        isLoadingComorbilidades = false;
+      });
+
+      print('Opciones de Comorbilidades cargadas:');
+      opcionesComorbilidad.forEach((opcion) {
+        print('ID: ${opcion.id}, Nombre: ${opcion.name}');
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        errorComorbilidades = e.toString();
+        isLoadingComorbilidades = false;
+      });
+
+      print('Error al cargar Comorbilidades: $errorComorbilidades');
+    }
   }
 
   /// Abre el diálogo para seleccionar la red de servicio del trabajador.
@@ -231,29 +297,13 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
     }
   }
 
-  /// Obtiene el ID de la comorbilidad basado en el nombre.
-  String _getIdComorbilidad(String name) {
-    switch (name) {
-      case 'Diabetes':
-        return '1';
-      case 'Hipertensión':
-        return '2';
-      case 'Enfermedad Pulmonar':
-        return '3';
-      case 'Otra':
-        return '4';
-      default:
-        return '';
-    }
-  }
-
   /// Método de ayuda para construir campos desplegables con etiquetas usando CustomTextFieldDropdown.
-  Widget _buildCustomDropdownField({
+  Widget _buildCustomDropdownField<T>({
     required String label,
-    required List<DropdownOption> options,
-    required String? selectedId,
+    required List<DropdownOption<T>> options,
+    required T? selectedId,
     required TextEditingController controller,
-    required Function(String?) onChanged,
+    required Function(T?) onChanged,
     required IconData icon,
     String hintText = 'Selecciona una opción',
   }) {
@@ -282,12 +332,10 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
             // Encontrar el ID correspondiente al nombre seleccionado
             final selectedOptionObj = options.firstWhere(
               (option) => option.name == selectedOption,
-              orElse: () => DropdownOption(id: '', name: ''),
+              orElse: () => DropdownOption<T>(id: null as T, name: ''),
             );
 
-            onChanged(selectedOptionObj.id.isNotEmpty
-                ? selectedOptionObj.id
-                : null);
+            onChanged(selectedOptionObj.id);
 
             print('Opción seleccionada para $label: ${selectedOptionObj.id}');
           },
@@ -340,6 +388,82 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
     );
   }
 
+  /// Método para obtener los datos ingresados.
+  Map<String, dynamic> getData() {
+    return {
+      'idEventoSalud': widget.idEventoSalud,
+      'idPersona': widget.idPersona,
+      'selectedMaternidadId': selectedMaternidadId,
+      'semanasGestacion': semanasGestacionController.text,
+      'esTrabajadorSalud': selectedEsTrabajadorSaludId,
+      'selectedSILAISId': selectedSILAISId,
+      'selectedEstablecimientoId': selectedEstablecimientoId,
+      'tieneComorbilidades': selectedTieneComorbilidadesId,
+      'selectedComorbilidadId': selectedComorbilidadId,
+      'nombreJefeFamilia': nombreJefeFamiliaController.text,
+      'telefonoReferencia': telefonoReferenciaController.text,
+    };
+  }
+
+  /// Valida los campos y devuelve una lista de mensajes de error si hay alguno.
+  List<String> validate() {
+    List<String> errors = [];
+
+    // Validar campos requeridos
+    if (selectedMaternidadId == null || selectedMaternidadId!.isEmpty) {
+      errors.add('Maternidad');
+    }
+
+    if (semanasGestacionController.text.isEmpty) {
+      errors.add('Semanas de Gestación');
+    }
+
+    if (selectedEsTrabajadorSaludId == null) {
+      errors.add('¿Es Trabajador de la Salud?');
+    } else if (selectedEsTrabajadorSaludId == true) {
+      if (selectedSILAISId == null || selectedSILAISId!.isEmpty) {
+        errors.add('SILAIS del Trabajador');
+      }
+      if (selectedEstablecimientoId == null ||
+          selectedEstablecimientoId!.isEmpty) {
+        errors.add('Establecimiento del Trabajador');
+      }
+    }
+
+    if (selectedTieneComorbilidadesId == null) {
+      errors.add('¿Tiene Comorbilidades?');
+    } else if (selectedTieneComorbilidadesId == true) {
+      if (selectedComorbilidadId == null || selectedComorbilidadId!.isEmpty) {
+        errors.add('Comorbilidades');
+      }
+    }
+
+    if (nombreJefeFamiliaController.text.isEmpty) {
+      errors.add('Nombre del Jefe de Familia');
+    } else {
+      // Validar que solo contiene letras
+      final nombre = nombreJefeFamiliaController.text;
+      final nombreRegExp = RegExp(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$');
+      if (!nombreRegExp.hasMatch(nombre)) {
+        errors.add('Nombre del Jefe de Familia solo debe contener letras');
+      }
+    }
+
+    if (telefonoReferenciaController.text.isEmpty) {
+      errors.add('Teléfono de Referencia');
+    } else {
+      // Validar patrón de teléfono
+      final telefono = telefonoReferenciaController.text;
+      final telefonoRegExp = RegExp(r'^\+\d{3} \d{4}-\d{4}$');
+      if (!telefonoRegExp.hasMatch(telefono)) {
+        errors.add(
+            'Teléfono de Referencia debe seguir el formato +XXX XXXX-XXXX');
+      }
+    }
+
+    return errors;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -361,34 +485,45 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
               const SizedBox(height: 20),
               _buildPersonaField(),
               const SizedBox(height: 20),
-              _buildCustomDropdownField(
-                label: 'Maternidad *',
-                options: opcionesMaternidad,
-                selectedId: selectedMaternidadId,
-                controller: maternidadController,
-                icon: Icons.home,
-                hintText: 'Selecciona una maternidad',
-                onChanged: (selectedId) {
-                  final selectedOption = opcionesMaternidad.firstWhere(
-                    (option) => option.id == selectedId,
-                    orElse: () => DropdownOption(id: '', name: ''),
-                  );
-                  setState(() {
-                    selectedMaternidadId =
-                        selectedOption.id.isNotEmpty ? selectedOption.id : null;
-                    maternidadController.text =
-                        selectedOption.name.isNotEmpty
-                            ? selectedOption.name
-                            : '';
-                  });
+              isLoadingMaternidad
+                  ? const CircularProgressIndicator()
+                  : errorMaternidad != null
+                      ? Text(
+                          'Error al cargar maternidad: $errorMaternidad',
+                          style: const TextStyle(color: Colors.red),
+                        )
+                      : _buildCustomDropdownField<String>(
+                          label: 'Maternidad *',
+                          options: opcionesMaternidad,
+                          selectedId: selectedMaternidadId,
+                          controller: maternidadController,
+                          icon: Icons.home,
+                          hintText: 'Selecciona una maternidad',
+                          onChanged: (selectedId) {
+                            final selectedOption =
+                                opcionesMaternidad.firstWhere(
+                              (option) => option.id == selectedId,
+                              orElse: () =>
+                                  DropdownOption<String>(id: '', name: ''),
+                            );
+                            setState(() {
+                              selectedMaternidadId = selectedOption.id.isNotEmpty
+                                  ? selectedOption.id
+                                  : null;
+                              maternidadController.text =
+                                  selectedOption.name.isNotEmpty
+                                      ? selectedOption.name
+                                      : '';
+                            });
 
-                  print('ID seleccionado Maternidad: $selectedMaternidadId');
-                },
-              ),
+                            print(
+                                'ID seleccionado Maternidad: $selectedMaternidadId');
+                          },
+                        ),
               const SizedBox(height: 20),
               _buildSemanasGestacionField(),
               const SizedBox(height: 20),
-              _buildCustomDropdownField(
+              _buildCustomDropdownField<bool>(
                 label: '¿Es Trabajador de la Salud? *',
                 options: opcionesTrabajadorSalud,
                 selectedId: selectedEsTrabajadorSaludId,
@@ -398,12 +533,13 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
                 onChanged: (selectedId) {
                   final selectedOption = opcionesTrabajadorSalud.firstWhere(
                     (option) => option.id == selectedId,
-                    orElse: () => DropdownOption(id: '0', name: 'No'),
+                    orElse: () =>
+                        DropdownOption<bool>(id: false, name: 'No'),
                   );
                   setState(() {
                     selectedEsTrabajadorSaludId = selectedOption.id;
                     esTrabajadorSaludController.text = selectedOption.name;
-                    _esTrabajadorSalud = selectedOption.id == '1';
+                    _esTrabajadorSalud = selectedOption.id;
                     if (!_esTrabajadorSalud) {
                       silaisTrabajadorController.clear();
                       establecimientoTrabajadorController.clear();
@@ -413,7 +549,7 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
                   });
 
                   print(
-                      'ID seleccionado ¿Es Trabajador de la Salud?: $selectedEsTrabajadorSaludId');
+                      '¿Es Trabajador de la Salud?: $selectedEsTrabajadorSaludId');
                 },
               ),
               const SizedBox(height: 20),
@@ -423,7 +559,7 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
                 _buildEstablecimientoField(),
                 const SizedBox(height: 20),
               ],
-              _buildCustomDropdownField(
+              _buildCustomDropdownField<bool>(
                 label: '¿Tiene Comorbilidades? *',
                 options: opcionesTieneComorbilidades,
                 selectedId: selectedTieneComorbilidadesId,
@@ -431,13 +567,16 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
                 icon: Icons.health_and_safety_outlined,
                 hintText: 'Selecciona una opción',
                 onChanged: (selectedId) {
-                  final selectedOption = opcionesTieneComorbilidades.firstWhere(
+                  final selectedOption =
+                      opcionesTieneComorbilidades.firstWhere(
                     (option) => option.id == selectedId,
-                    orElse: () => DropdownOption(id: '0', name: 'No'),
+                    orElse: () =>
+                        DropdownOption<bool>(id: false, name: 'No'),
                   );
                   setState(() {
-                    tieneComorbilidadesController.text = selectedOption.name;
-                    _tieneComorbilidades = selectedOption.id == '1';
+                    tieneComorbilidadesController.text =
+                        selectedOption.name;
+                    _tieneComorbilidades = selectedOption.id;
                     selectedTieneComorbilidadesId = selectedOption.id;
                     if (!_tieneComorbilidades) {
                       comorbilidadesController.clear();
@@ -445,40 +584,49 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
                     }
                   });
 
-                  print(
-                      'ID seleccionado ¿Tiene Comorbilidades?: $selectedTieneComorbilidadesId');
+                  print('¿Tiene Comorbilidades?: $selectedTieneComorbilidadesId');
                 },
               ),
               const SizedBox(height: 20),
               if (_tieneComorbilidades) ...[
-                _buildCustomDropdownField(
-                  label: 'Comorbilidades *',
-                  options: opcionesComorbilidad,
-                  selectedId: selectedComorbilidadId,
-                  controller: comorbilidadesController,
-                  icon: Icons.medical_services,
-                  hintText: 'Selecciona una comorbilidad',
-                  onChanged: (selectedId) {
-                    if (selectedId == null) return;
-                    final opcionComorbilidad = opcionesComorbilidad.firstWhere(
-                      (option) => option.id == selectedId,
-                      orElse: () => DropdownOption(id: '', name: ''),
-                    );
-                    setState(() {
-                      selectedComorbilidadId =
-                          opcionComorbilidad.id.isNotEmpty
-                              ? opcionComorbilidad.id
-                              : null;
-                      comorbilidadesController.text =
-                          opcionComorbilidad.name.isNotEmpty
-                              ? opcionComorbilidad.name
-                              : '';
-                    });
+                isLoadingComorbilidades
+                    ? const CircularProgressIndicator()
+                    : errorComorbilidades != null
+                        ? Text(
+                            'Error al cargar comorbilidades: $errorComorbilidades',
+                            style: const TextStyle(color: Colors.red),
+                          )
+                        : _buildCustomDropdownField<String>(
+                            label: 'Comorbilidades *',
+                            options: opcionesComorbilidad,
+                            selectedId: selectedComorbilidadId,
+                            controller: comorbilidadesController,
+                            icon: Icons.medical_services,
+                            hintText: 'Selecciona una comorbilidad',
+                            onChanged: (selectedId) {
+                              if (selectedId == null || selectedId.isEmpty)
+                                return;
+                              final opcionComorbilidad =
+                                  opcionesComorbilidad.firstWhere(
+                                (option) => option.id == selectedId,
+                                orElse: () =>
+                                    DropdownOption<String>(id: '', name: ''),
+                              );
+                              setState(() {
+                                selectedComorbilidadId =
+                                    opcionComorbilidad.id.isNotEmpty
+                                        ? opcionComorbilidad.id
+                                        : null;
+                                comorbilidadesController.text =
+                                    opcionComorbilidad.name.isNotEmpty
+                                        ? opcionComorbilidad.name
+                                        : '';
+                              });
 
-                    print(
-                        'ID seleccionado Comorbilidad: $selectedComorbilidadId');
-                  },
-                ),
+                              print(
+                                  'ID seleccionado Comorbilidad: $selectedComorbilidadId');
+                            },
+                          ),
                 const SizedBox(height: 20),
               ],
               _buildNombreJefeFamiliaField(),
@@ -616,6 +764,10 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
       controller: nombreJefeFamiliaController,
       hintText: 'Ingresa el nombre completo',
       icon: Icons.person,
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]')),
+        LettersOnlyTextInputFormatter(),
+      ],
     );
   }
 
@@ -624,9 +776,13 @@ class _PrimeraTarjetaState extends State<PrimeraTarjeta> {
     return _buildTextField(
       label: 'Teléfono de Referencia *',
       controller: telefonoReferenciaController,
-      hintText: 'Ingresa el teléfono de referencia',
+      hintText: '+505 0000-0000',
       icon: Icons.phone,
       keyboardType: TextInputType.phone,
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'[+\d\s-]')),
+        PhoneNumberFormatter(),
+      ],
     );
   }
 

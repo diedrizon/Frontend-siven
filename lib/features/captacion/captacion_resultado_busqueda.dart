@@ -133,7 +133,7 @@ class _CaptacionResultadoBusquedaState extends State<CaptacionResultadoBusqueda>
           child: IconButton(
             icon: const Icon(Icons.arrow_back, color: Color(0xFF1877F2), size: 32),
             onPressed: () {
-              Navigator.pushNamed(context, '/'); // Volver a la pantalla inicial
+              Navigator.pushNamed(context, '/captacion_busqueda_por_nombre'); // Volver a la pantalla inicial
             },
           ),
         ),

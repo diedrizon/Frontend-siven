@@ -7,95 +7,95 @@ class HttpService {
 
   HttpService({required this.httpClient});
 
-  // Método genérico GET con autenticación
-  Future<http.Response> get(String url) async {
+  // Obtener un token válido del StorageService
+  Future<String> _getToken() async {
     final token = await StorageService().getToken();
-    if (token == null) {
-      throw Exception('Token no encontrado');
+    if (token == null || token.isEmpty) {
+      throw Exception('Token no encontrado. Por favor, inicie sesión.');
     }
+    return token;
+  }
 
+  // Manejar errores de autorización
+  void _handleUnauthorized(http.Response response) async {
+    if (response.statusCode == 401 || response.body.contains('JWT signature does not match')) {
+      await StorageService().deleteToken(); // Eliminar el token inválido
+      throw Exception('Token inválido. Por favor, reautentíquese.');
+    }
+  }
+
+  // Método GET con autenticación
+  Future<http.Response> get(String url, {Map<String, String>? headers}) async {
+    final token = await _getToken();
     final response = await httpClient.get(
       Uri.parse(url),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
+        ...?headers, // Combina encabezados adicionales
       },
     );
 
-    // Verificar si el token es inválido y limpiar el token almacenado
-    if (response.statusCode == 401 || response.body.contains('JWT signature does not match')) {
-      await StorageService().deleteToken(); // Eliminar token no válido
-      throw Exception('Token inválido. Reautenticar.');
-    }
-
+    _handleUnauthorized(response);
     return response;
   }
 
-  // Método genérico POST con autenticación
-  Future<http.Response> post(String url, Map<String, dynamic> body) async {
-    final token = await StorageService().getToken();
-    if (token == null) {
-      throw Exception('Token no encontrado');
-    }
-
+  // Método POST con autenticación
+  Future<http.Response> post(String url, Map<String, dynamic> body, {Map<String, String>? headers}) async {
+    final token = await _getToken();
     final response = await httpClient.post(
       Uri.parse(url),
       headers: {
-        'Authorization': 'Bearer $token',  // Se agrega el token a la solicitud
+        'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
+        ...?headers,
       },
       body: jsonEncode(body),
     );
 
+    _handleUnauthorized(response);
     if (response.statusCode != 200 && response.statusCode != 201) {
       throw Exception('Error en la solicitud POST: ${response.statusCode}');
     }
-
     return response;
   }
 
-  // Método genérico PUT con autenticación
-  Future<http.Response> put(String url, Map<String, dynamic> body) async {
-    final token = await StorageService().getToken();
-    if (token == null) {
-      throw Exception('Token no encontrado');
-    }
-
+  // Método PUT con autenticación
+  Future<http.Response> put(String url, Map<String, dynamic> body, {Map<String, String>? headers}) async {
+    final token = await _getToken();
     final response = await httpClient.put(
       Uri.parse(url),
       headers: {
-        'Authorization': 'Bearer $token',  // Se agrega el token a la solicitud
+        'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
+        ...?headers,
       },
       body: jsonEncode(body),
     );
 
+    _handleUnauthorized(response);
     if (response.statusCode != 200) {
       throw Exception('Error en la solicitud PUT: ${response.statusCode}');
     }
-
     return response;
   }
 
-  // Método genérico DELETE con autenticación
-  Future<http.Response> delete(String url) async {
-    final token = await StorageService().getToken();
-    if (token == null) {
-      throw Exception('Token no encontrado');
-    }
-
+  // Método DELETE con autenticación
+  Future<http.Response> delete(String url, {Map<String, String>? headers}) async {
+    final token = await _getToken();
     final response = await httpClient.delete(
       Uri.parse(url),
       headers: {
-        'Authorization': 'Bearer $token',  // Se agrega el token a la solicitud
+        'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
+        ...?headers,
       },
     );
 
+    _handleUnauthorized(response);
     if (response.statusCode != 200) {
       throw Exception('Error en la solicitud DELETE: ${response.statusCode}');
     }
-
     return response;
   }
 }

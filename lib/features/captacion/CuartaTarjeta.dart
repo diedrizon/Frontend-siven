@@ -1,7 +1,8 @@
-// lib/widgets/CuartaTarjeta.dart
+// CuartaTarjeta.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart'; // Agregado para formateo de fechas
 import 'package:siven_app/core/services/DiagnosticoService.dart';
 import 'package:siven_app/core/services/ResultadoDiagnosticoService.dart';
 import 'package:siven_app/core/services/catalogo_service_red_servicio.dart';
@@ -23,6 +24,7 @@ class CuartaTarjeta extends StatefulWidget {
   final ResultadoDiagnosticoService resultadoDiagnosticoService;
   final CatalogServiceRedServicio catalogService;
   final SelectionStorageService selectionStorageService;
+  final Future<void> Function() onGuardarPressed;
 
   const CuartaTarjeta({
     Key? key,
@@ -30,13 +32,14 @@ class CuartaTarjeta extends StatefulWidget {
     required this.resultadoDiagnosticoService,
     required this.catalogService,
     required this.selectionStorageService,
+    required this.onGuardarPressed,
   }) : super(key: key);
 
   @override
-  _CuartaTarjetaState createState() => _CuartaTarjetaState();
+  CuartaTarjetaState createState() => CuartaTarjetaState();
 }
 
-class _CuartaTarjetaState extends State<CuartaTarjeta> {
+class CuartaTarjetaState extends State<CuartaTarjeta> {
   // Controladores de texto para cada campo
   final TextEditingController diagnosticoController = TextEditingController();
   final TextEditingController resultadoDiagnosticoController = TextEditingController();
@@ -49,8 +52,6 @@ class _CuartaTarjetaState extends State<CuartaTarjeta> {
   final TextEditingController densidadFalciparumESSController = TextEditingController();
   final TextEditingController silaisDiagnosticoController = TextEditingController();
   final TextEditingController establecimientoDiagnosticoController = TextEditingController();
-
-  bool _isSaving = false; // Estado para el botón de guardar
 
   // Listas para los Dropdowns
   List<DropdownOption> _diagnosticos = [];
@@ -67,6 +68,8 @@ class _CuartaTarjetaState extends State<CuartaTarjeta> {
 
   bool _isLoadingResultados = true;
   String? _errorResultados;
+
+  bool _isSaving = false; // Para controlar el estado de guardado
 
   @override
   void initState() {
@@ -90,6 +93,51 @@ class _CuartaTarjetaState extends State<CuartaTarjeta> {
     silaisDiagnosticoController.dispose();
     establecimientoDiagnosticoController.dispose();
     super.dispose();
+  }
+
+  /// Método para obtener los datos ingresados.
+  Map<String, dynamic> getData() {
+    return {
+      'selectedDiagnosticoId': _selectedDiagnosticoId,
+      'fechaTomaMuestra': fechaTomaMuestraController.text,
+      'fechaRecepcionLab': fechaRecepcionLabController.text,
+      'fechaDiagnostico': fechaDiagnosticoController.text,
+      'selectedResultadoDiagnosticoId': _selectedResultadoDiagnosticoId,
+      'densidadVivaxEAS': densidadVivaxEASController.text,
+      'densidadVivaxESS': densidadVivaxESSController.text,
+      'densidadFalciparumEAS': densidadFalciparumEASController.text,
+      'densidadFalciparumESS': densidadFalciparumESSController.text,
+      'selectedSILAISDiagnosticoId': _selectedSILAISDiagnosticoId,
+      'selectedEstablecimientoDiagnosticoId': _selectedEstablecimientoDiagnosticoId,
+    };
+  }
+
+  /// Método para resetear los campos de la tarjeta
+  void resetFields() {
+    setState(() {
+      diagnosticoController.clear();
+      resultadoDiagnosticoController.clear();
+      fechaTomaMuestraController.clear();
+      fechaRecepcionLabController.clear();
+      fechaDiagnosticoController.clear();
+      densidadVivaxEASController.clear();
+      densidadVivaxESSController.clear();
+      densidadFalciparumEASController.clear();
+      densidadFalciparumESSController.clear();
+      silaisDiagnosticoController.clear();
+      establecimientoDiagnosticoController.clear();
+      _selectedDiagnosticoId = null;
+      _selectedResultadoDiagnosticoId = null;
+      _selectedSILAISDiagnosticoId = null;
+      _selectedEstablecimientoDiagnosticoId = null;
+    });
+  }
+
+  /// Método para actualizar el estado de guardado desde el widget padre
+  void setSavingState(bool isSaving) {
+    setState(() {
+      _isSaving = isSaving;
+    });
   }
 
   /// Función para cargar diagnósticos desde el servicio
@@ -160,31 +208,82 @@ class _CuartaTarjetaState extends State<CuartaTarjeta> {
     }
   }
 
-  /// Función para guardar los datos (simulación)
-  Future<void> _guardarDatos() async {
-    setState(() {
-      _isSaving = true;
-    });
+  /// Método de validación que retorna una lista de campos con errores.
+  List<String> validate() {
+    List<String> errors = [];
 
-    // Aquí puedes implementar la lógica para guardar los datos en tu base de datos o servidor
-
-    // Simular un proceso de guardado
-    await Future.delayed(const Duration(seconds: 2));
-
-    setState(() {
-      _isSaving = false;
-    });
-
-    // Mostrar mensaje de éxito
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Se guardó exitosamente'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
-      );
+    // Validar Diagnóstico
+    if (_selectedDiagnosticoId == null) {
+      errors.add('Diagnóstico');
     }
+
+    // Validar Fecha de Toma de Muestra
+    if (fechaTomaMuestraController.text.isEmpty) {
+      errors.add('Fecha de Toma de Muestra');
+    }
+
+    // Validar Fecha de Recepción en Laboratorio
+    if (fechaRecepcionLabController.text.isEmpty) {
+      errors.add('Fecha de Recepción en Laboratorio');
+    }
+
+    // Validar Fecha de Diagnóstico
+    if (fechaDiagnosticoController.text.isEmpty) {
+      errors.add('Fecha de Diagnóstico');
+    }
+
+    // Validar Resultado del Diagnóstico
+    if (_selectedResultadoDiagnosticoId == null) {
+      errors.add('Resultado del Diagnóstico');
+    }
+
+    // Validar Densidad Parasitaria Vivax EAS
+    if (densidadVivaxEASController.text.isEmpty) {
+      errors.add('Densidad Parasitaria Vivax EAS');
+    } else {
+      if (!RegExp(r'^\d+$').hasMatch(densidadVivaxEASController.text)) {
+        errors.add('Densidad Parasitaria Vivax EAS debe contener solo dígitos');
+      }
+    }
+
+    // Validar Densidad Parasitaria Vivax ESS
+    if (densidadVivaxESSController.text.isEmpty) {
+      errors.add('Densidad Parasitaria Vivax ESS');
+    } else {
+      if (!RegExp(r'^\d+$').hasMatch(densidadVivaxESSController.text)) {
+        errors.add('Densidad Parasitaria Vivax ESS debe contener solo dígitos');
+      }
+    }
+
+    // Validar Densidad Parasitaria Falciparum EAS
+    if (densidadFalciparumEASController.text.isEmpty) {
+      errors.add('Densidad Parasitaria Falciparum EAS');
+    } else {
+      if (!RegExp(r'^\d+$').hasMatch(densidadFalciparumEASController.text)) {
+        errors.add('Densidad Parasitaria Falciparum EAS debe contener solo dígitos');
+      }
+    }
+
+    // Validar Densidad Parasitaria Falciparum ESS
+    if (densidadFalciparumESSController.text.isEmpty) {
+      errors.add('Densidad Parasitaria Falciparum ESS');
+    } else {
+      if (!RegExp(r'^\d+$').hasMatch(densidadFalciparumESSController.text)) {
+        errors.add('Densidad Parasitaria Falciparum ESS debe contener solo dígitos');
+      }
+    }
+
+    // Validar SILAIS Diagnóstico
+    if (_selectedSILAISDiagnosticoId == null) {
+      errors.add('SILAIS Diagnóstico');
+    }
+
+    // Validar Establecimiento Diagnóstico
+    if (_selectedEstablecimientoDiagnosticoId == null) {
+      errors.add('Establecimiento Diagnóstico');
+    }
+
+    return errors;
   }
 
   /// Método auxiliar para construir campos desplegables usando CustomTextFieldDropdown
@@ -306,21 +405,163 @@ class _CuartaTarjetaState extends State<CuartaTarjeta> {
       onTap: () async {
         DateTime? pickedDate = await showDatePicker(
           context: context,
+          // Removido el locale para evitar posibles errores
           initialDate: DateTime.now(),
           firstDate: DateTime(2000),
           lastDate: DateTime(2101),
         );
+
         if (pickedDate != null) {
+          // Usar DateFormat para formatear la fecha de manera consistente
+          String formattedDate = DateFormat('yyyy-MM-dd').format(pickedDate);
           setState(() {
-            controller.text = "${pickedDate.toLocal()}".split(' ')[0];
+            controller.text = formattedDate;
           });
         }
       },
     );
   }
 
-  /// Método auxiliar para construir campos de texto con ícono de búsqueda.
-  Widget buildSearchableTextField({
+  /// Método para abrir el diálogo de selección para Diagnóstico
+  Future<void> _abrirDialogoSeleccionRedServicioDiagnostico() async {
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+          child: SeleccionRedServicioTrabajadorWidget(
+            catalogService: widget.catalogService,
+            selectionStorageService: widget.selectionStorageService,
+          ),
+        );
+      },
+    );
+
+    if (result != null) {
+      if (!mounted) return;
+      setState(() {
+        silaisDiagnosticoController.text =
+            result['silais'] ?? 'SILAIS no seleccionado';
+        establecimientoDiagnosticoController.text =
+            result['establecimiento'] ?? 'Establecimiento no seleccionado';
+        _selectedSILAISDiagnosticoId = int.tryParse(result['silaisId'] ?? '');
+        _selectedEstablecimientoDiagnosticoId =
+            int.tryParse(result['establecimientoId'] ?? '');
+      });
+
+      // Imprimir los IDs seleccionados
+      print('ID seleccionado SILAIS Diagnóstico: $_selectedSILAISDiagnosticoId');
+      print('ID seleccionado Establecimiento Diagnóstico: $_selectedEstablecimientoDiagnosticoId');
+    }
+  }
+
+  /// Método para mostrar el diálogo de errores
+  void _showErrorDialog(List<String> errors) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white, // Fondo blanco
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+          title: Row(
+            children: const [
+              Icon(Icons.error, color: Colors.red),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Campos incompletos o inválidos',
+                  style: TextStyle(color: Color(0xFF00C1D4)),
+                ),
+              ),
+            ],
+          ),
+          content: Container(
+            // Limitar el ancho del contenido para evitar desbordamientos
+            width: MediaQuery.of(context).size.width * 0.8,
+            child: SingleChildScrollView(
+              child: ListBody(
+                children: errors.map((e) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4.0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            e,
+                            style: const TextStyle(color: Colors.black),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'OK',
+                style: TextStyle(color: Color(0xFF00C1D4)),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Función para guardar los datos
+  Future<void> _guardarDatos() async {
+    // Validar los campos
+    List<String> errors = validate();
+    if (errors.isNotEmpty) {
+      _showErrorDialog(errors);
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      // Llamar a la función pasada desde el widget padre
+      await widget.onGuardarPressed();
+
+      // Mostrar éxito
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Captación guardada exitosamente'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      // Mostrar error
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al guardar la captación: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isSaving = false;
+      });
+    }
+  }
+
+  /// Método para construir campos de texto con ícono de búsqueda.
+  Widget _buildSearchableTextField({
     required String label,
     required TextEditingController controller,
     required String hintText,
@@ -364,41 +605,6 @@ class _CuartaTarjetaState extends State<CuartaTarjeta> {
         ),
       ],
     );
-  }
-
-  /// Función para abrir el diálogo de selección para Diagnóstico
-  Future<void> _abrirDialogoSeleccionRedServicioDiagnostico() async {
-    final result = await showDialog<Map<String, String>>(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.0),
-          ),
-          child: SeleccionRedServicioTrabajadorWidget(
-            catalogService: widget.catalogService,
-            selectionStorageService: widget.selectionStorageService,
-          ),
-        );
-      },
-    );
-
-    if (result != null) {
-      if (!mounted) return;
-      setState(() {
-        silaisDiagnosticoController.text =
-            result['silais'] ?? 'SILAIS no seleccionado';
-        establecimientoDiagnosticoController.text =
-            result['establecimiento'] ?? 'Establecimiento no seleccionado';
-        _selectedSILAISDiagnosticoId = int.tryParse(result['silaisId'] ?? '');
-        _selectedEstablecimientoDiagnosticoId =
-            int.tryParse(result['establecimientoId'] ?? '');
-      });
-
-      // Imprimir los IDs seleccionados
-      print('ID seleccionado SILAIS Diagnóstico: $_selectedSILAISDiagnosticoId');
-      print('ID seleccionado Establecimiento Diagnóstico: $_selectedEstablecimientoDiagnosticoId');
-    }
   }
 
   @override
@@ -559,7 +765,7 @@ class _CuartaTarjetaState extends State<CuartaTarjeta> {
               const SizedBox(height: 20),
 
               // Campo: SILAIS Diagnóstico con Icono de Búsqueda
-              buildSearchableTextField(
+              _buildSearchableTextField(
                 label: 'SILAIS Diagnóstico *',
                 controller: silaisDiagnosticoController,
                 hintText: 'Selecciona un SILAIS',
@@ -569,7 +775,7 @@ class _CuartaTarjetaState extends State<CuartaTarjeta> {
               const SizedBox(height: 20),
 
               // Campo: Establecimiento Diagnóstico con Icono de Búsqueda
-              buildSearchableTextField(
+              _buildSearchableTextField(
                 label: 'Establecimiento Diagnóstico *',
                 controller: establecimientoDiagnosticoController,
                 hintText: 'Selecciona un establecimiento',
